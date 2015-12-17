@@ -1,10 +1,10 @@
 ## 利用shooter.org提供的api下载字幕
 
-** API: https://www.shooter.cn/api/subapi.php **
+##### API: https://www.shooter.cn/api/subapi.php
 
-api使用说明请参考原文: [射手字幕网api使用说明](https://docs.google.com/document/d/1ufdzy6jbornkXxsD-OGl3kgWa4P9WO5NZb6_QYZiGI0/preview)
+API使用说明请参考原文: [射手字幕网API使用说明](https://docs.google.com/document/d/1ufdzy6jbornkXxsD-OGl3kgWa4P9WO5NZb6_QYZiGI0/preview)
 
-## 使用方法
+## 使用说明
 该脚本可以找出给定目录下的所有视频文件(`注意: 不递归子目录`), 然后利用api下载所有
 匹配的中英文字幕。也可以只下载单个视频对应的字幕.
 - -o, --output 指定字幕保存目录,默认为path(即视频文件所在的目录).
