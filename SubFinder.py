@@ -1,4 +1,5 @@
-#-*- coding: gbk -*-
+#!/bin/env python
+#-*- coding: utf8 -*-
 import hashlib
 import os
 import requests
@@ -9,13 +10,18 @@ import argparse
 import tempfile
 import shutil
 
+GetRequest = requests.get
+PostRequestGet = requests.post
+
 POST_URL = 'https://www.shooter.cn/api/subapi.php'
-FIND_SUBS = 0                           # ÕÒµ½µÄ×ÖÄ»Êı
-SUCCESSED_SUBS = 0                      # ÏÂÔØ³É¹¦µÄ×ÖÄ»Êı
-FAILED_SUBS = 0                         # ÏÂÔØÊ§°ÜµÄ×ÖÄ»Êı
-NO_SUBTITLES = []                       # Ã»ÓĞÕÒµ½×ÖÄ»µÄÎÄ¼şÁĞ±í
-LOCK_FOR_PRINT = threading.Lock()       # ÓÃÓÚ±£»¤printĞÅÏ¢Ê±²»»á³öÏÖ"ÂÒÂë"
-                                        # (i.e ¶àĞĞĞÅÏ¢³öÏÖÔÚÍ¬Ò»ĞĞ)
+
+FIND_SUBS = 0                           # æ‰¾åˆ°çš„å­—å¹•æ•°
+SUCCESSED_SUBS = 0                      # ä¸‹è½½æˆåŠŸçš„å­—å¹•æ•°
+FAILED_SUBS = 0                         # ä¸‹è½½å¤±è´¥çš„å­—å¹•æ•°
+NO_SUBTITLES = []                       # æ²¡æœ‰æ‰¾åˆ°å­—å¹•çš„æ–‡ä»¶åˆ—è¡¨
+
+LOCK_FOR_PRINT = threading.Lock()       # ç”¨äºä¿æŠ¤printä¿¡æ¯æ—¶ä¸ä¼šå‡ºç°"ä¹±ç "
+                                        # (i.e å¤šè¡Œä¿¡æ¯å‡ºç°åœ¨åŒä¸€è¡Œ)
 LOCK_FOR_NO_SUBTITLES = threading.Lock() 
 LOCK_FOR_FIND = threading.Lock()
 LOCK_FOR_SUCCESSED = threading.Lock()
@@ -27,15 +33,16 @@ class LanguageError(Exception):
         self.args = args
     
     def __str__(self):
-        return '<LanguageError>: Language must be "Eng" or "Chn". Not %s' % self.msg
+        return '<LanguageError>: Language must be "Eng" or "Chn".' + \
+               'Not %s' % self.msg
 
 class TooManyThreadsError(Exception):
     def __init__(self, threads, max_threads):
         self.threads = threads
         self.max_threads = max_threads
     def __str__(self):
-        msg = '<TooManyThreadsError>: Too many thrads, maximum threads is {},' + \
-              'you specify {}'
+        msg = '<TooManyThreadsError>: Too many thrads,' + \
+              'maximum threads is {}, you specify {}'
         return msg.format(self.max_threads, self.threads)
 
 def getFileSize(filestring_or_fileobj):
@@ -63,54 +70,32 @@ def computerVideoHash(videofile):
             hash_result.append(m.hexdigest())
         return ';'.join(hash_result)
 
-def getVedioFileFromDir(dir):
-    '''´ÓÄ³Ò»Ä¿Â¼ÖĞ»ñÈ¡ËùÓĞÊÓÆµÎÄ¼ş£¬·µ»Øbasename
+def getVedioFileFromDir(dir, recursive=False):
+    '''ä»æŸä¸€ç›®å½•ä¸­è·å–æ‰€æœ‰è§†é¢‘æ–‡ä»¶ï¼Œè¿”å›basename
     '''
-    for f in os.listdir(dir):
-        if os.path.isfile(os.path.join(dir, f)):
-            types = mimetypes.guess_type(f)
-            mtype = types[0]
-            if mtype and mtype.split('/')[0] == 'video':
-                yield os.path.abspath(os.path.join(dir, f))
+    result = []
+    append = result.append
+    if recursive:
+        for root, dirs, files in os.walk(dir):
+            for filename in files:
+                f = os.path.abspath(os.path.join(root, filename))
+                types = mimetypes.guess_type(f)
+                mtype = types[0]  
+                if mtype and mtype.split('/')[0] == 'video':
+                    append(f)
+    else:
+        for f in os.listdir(dir):
+            if os.path.isfile(os.path.join(dir, f)):
+                types = mimetypes.guess_type(f)
+                mtype = types[0]
+                if mtype and mtype.split('/')[0] == 'video':
+                    append(os.path.abspath(os.path.join(dir, f)))
+    return result
 
-class DownloadSubThread(threading.Thread):
-    def __init__(self, files, output, lang, *args, **kwargs):
+def getSubInfo(videofile, lang):
         '''\
-        @param files: ÊÓÆµÎÄ¼şÃûÁĞ±í(¾ø¶ÔÂ·¾¶)
-        @param output: ×ÖÄ»±£´æÄ¿Â¼
-        '''
-        self.files = files
-        self.output = output
-        self.lang = lang
-        self.session = requests.Session()
-        threading.Thread.__init__(self, *args, **kwargs)
-
-    def run(self):
-        global FIND_SUBS
-        global NO_SUBTITLES
-        for f in self.files:
-            flag = 0
-            for lang in self.lang:
-                sub_info_list = self.getSubInfo(f, lang)
-                if sub_info_list:
-                    LOCK_FOR_FIND.acquire()
-                    FIND_SUBS += sum([len(sub_info['Files'])
-                                        for sub_info in sub_info_list])
-                    LOCK_FOR_FIND.release()
-                    # »ñµÃÎŞÀ©Õ¹ÃûµÄÎÄ¼şÃû
-                    filename = os.path.splitext(os.path.basename(f))[0] 
-                    self.downloadSub(sub_info_list, self.output, filename, lang)
-                else:
-                    flag += 1
-            if flag == 2:
-                LOCK_FOR_NO_SUBTITLES.acquire()
-                NO_SUBTITLES.append(f)
-                LOCK_FOR_NO_SUBTITLES.release()
-    
-    def getSubInfo(self, videofile, lang):
-        '''\
-        @param videofile: ÊÓÆµÎÄ¼şµÄ¾ø¶ÔÂ·¾¶
-        @param lang: ÓïÑÔ, ¿ÉÑ¡ÖµÓĞ['Chn', 'Eng']
+        @param videofile: The absolute path of video file
+        @param lang: The subtitle's language, it's must be 'Chn' or 'Eng'
         '''
         filehash = computerVideoHash(videofile)
         pathinfo = os.path.basename(videofile)
@@ -122,147 +107,223 @@ class DownloadSubThread(threading.Thread):
                    'pathinfo': pathinfo,
                    'format': format,
                    'lang': lang}
-        res = self.session.post(POST_URL, data=payload)
+        res = PostRequestGet(POST_URL, data=payload)
         if res.content == '\xff':
             return []
         return res.json()
 
-    def downloadSub(self, sub_info_list, path, filename, lang):
-        '''\
-        @param sub_info_list: ÓÉapi·µ»ØµÄ×ÖÄ»ĞÅÏ¢ÁĞ±í
-        @param path: ×ÖÄ»±£´æÂ·¾¶
-        @oaram filename: ÊÓÆµÎÄ¼şÃû(ÎŞÀ©Õ¹Ãû),ÓÃÓÚ×÷Îª×ÖÄ»µÄÎÄ¼şÃû
-        '''
-        global FAILED_SUBS
-        global SUCCESSED_SUBS
-        counters = {'sub': 0, 'idx': 0, 'srt': 0}
-        for sub_info in sub_info_list:
-            subfiles = sub_info['Files']
-            delay = sub_info['Delay']
-            desc = sub_info['Desc']
-            for subfile in subfiles:
-                ext = subfile['Ext']
-                link = subfile['Link']
-                try:
-                    res = self.session.get(link)
-                    if res.status_code == requests.codes.ok:
-                        counter = counters.setdefault(ext, 0)
-                        counter += 1
-                        counters[ext] = counter
-                        n = '' if counters[ext] == 1 else counters[ext]
-                        subfilename = '{filename}.{lang}{counter}.{ext}'.format(
-                            filename=filename,
-                            lang=lang,
-                            counter=n,
-                            ext=ext)
-                        LOCK_FOR_PRINT.acquire()
-                        print '%s' % subfilename
-                        LOCK_FOR_PRINT.release()
-                        with open(os.path.join(path, subfilename), 'wb') as fp:
-                            fp.write(res.content)
-                    else:
-                        res.raise_for_status()
-                        LOCK_FOR_FAILED.acquire()
-                        FAILED_SUBS += 1
-                        LOCK_FOR_FAILED.release()
-                except requests.exceptions.RequestException as e:
+def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
+    '''\
+    @param sub_info_list: It's a list of sub_info, 
+        the detail infomation about data structure of sub_info can find on
+        <https://docs.google.com/document/d/1ufdzy6jbornkXxsD-OGl3kgWa4P9WO5
+        NZb6_QYZiGI0/preview>
+    @oaram basename: video file's basename(no ext).
+    @param lang: language of subtitles
+    @param output: The output directory of subtitles
+    '''
+    global FAILED_SUBS
+    global SUCCESSED_SUBS
+    counters = {'sub': 0, 'idx': 0, 'srt': 0}
+    for sub_info in sub_info_list:
+        subfiles = sub_info['Files']
+        delay = sub_info['Delay']
+        desc = sub_info['Desc']
+        for subfile in subfiles:
+            ext = subfile['Ext']
+            link = subfile['Link']
+            try:
+                res = GetRequest(link)
+                if res.status_code == requests.codes.ok:
+                    counter = counters.setdefault(ext, 0)
+                    counter += 1
+                    counters[ext] = counter
+                    n = '' if counters[ext] == 1 else counters[ext]
+                    subfilename = '{basename}.{lang}{counter}.{ext}'.format(
+                        basename=basename,
+                        lang=lang.lower(),
+                        counter=n,
+                        ext=ext)
+                    LOCK_FOR_PRINT.acquire()
+                    print '%s' % subfilename
+                    LOCK_FOR_PRINT.release()
+                    if not os.path.exists(output):
+                        os.makedirs(output)
+                    with open(os.path.join(output, subfilename), 'wb') as fp:
+                        fp.write(res.content)
+                else:
+                    res.raise_for_status()
                     LOCK_FOR_FAILED.acquire()
                     FAILED_SUBS += 1
                     LOCK_FOR_FAILED.release()
-                    print e
-        LOCK_FOR_SUCCESSED.acquire()
-        SUCCESSED_SUBS += sum(counters.values())
-        LOCK_FOR_SUCCESSED.release()
-   
+            except requests.exceptions.RequestException as e:
+                LOCK_FOR_FAILED.acquire()
+                FAILED_SUBS += 1
+                LOCK_FOR_FAILED.release()
+                print e
+    LOCK_FOR_SUCCESSED.acquire()
+    SUCCESSED_SUBS += sum(counters.values())
+    LOCK_FOR_SUCCESSED.release()
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('path', help="°üº¬ÊÓÆµµÄÄ¿Â¼Ãû»òÊÓÆµÎÄ¼şÃû.")
-    parser.add_argument('-o', '--output', help="×ÖÄ»Êä³öÄ¿Â¼.")
-    parser.add_argument('-c', '--compress', action='store_true', default=False,
-                        help="ÊÇ·ñÑ¹Ëõ×ÖÄ»,Ä¬ÈÏ²»Ñ¹Ëõ,Ö±½Ó±£´æÔÚÊÓÆµËùÔÚµÄÄ¿Â¼.")
-    parser.add_argument('-n', '--threads', type=int, help="Ö¸¶¨Ïß³ÌÊı")
-    parser.add_argument('--lang', choices=['Chn', 'Eng'], type=list, dest='language',
-                        help="Ñ¡Ôñ×ÖÄ»ÓïÑÔ, ¿ÉÑ¡ÖµÓĞ:[Chn, Eng], Ä¬ÈÏÎª['Chn', 'Eng']")
+class DownloadSubThread(threading.Thread):
+    def __init__(self, root, files, output=None, languages=['Chn', 'Eng']):
+        '''\
+        @param root: The root path
+        @param files: è§†é¢‘æ–‡ä»¶ååˆ—è¡¨(ç»å¯¹è·¯å¾„)
+        @param output: The output directory that downloading subtitles
+            will saving in. default is None, it's same as file's dirname
+        '''
+        self.root = root
+        self.files = files
+        self.output = output
+        self.languages = languages
+        self.session = requests.Session()
+        threading.Thread.__init__(self)
 
-    args = parser.parse_args()
-    language = args.language
-    if language is None:
-        language = ['Chn', 'Eng']
-
-    if os.path.exists(args.path):
-        if os.path.isfile(args.path):
-            # ÅĞ¶ÏpathÊÇÎÄ¼şÇÒÊÇÊÓÆµÎÄ¼ş
-            types = mimetypes.guess_type(args.path)
-            mtype = types[0]
-            if mtype and mtype.split('/')[0] == 'video':
-                # ÏÂÔØÒ»¸ö×ÖÄ»
-                print 'Find 1 video\n'
-                output = args.output
-                if not output:
-                    output = os.path.dirname(args.path)
-                t = DownloadSubThread([args.path], output, language)
-                t.start()
-                t.join()
-            else:
-                print '%s is not a video file' % args.path
-                sys.exit(1)
-
-        elif os.path.isdir(args.path):
-            output = args.output
-            if not output:
-                # Èç¹ûÃ»ÓĞÖ¸¶¨×ÖÄ»Êä³öÄ¿Â¼,Ôò½«×ÖÄ»Êä³öÄ¿Â¼Ö¸¶¨ÎªÊÓÆµÎÄ¼şËùÔÚÄ¿Â¼
-                output = args.path
-            is_compress = args.compress
-            if is_compress:
-                # Èç¹ûÖ¸¶¨ÒªÑ¹Ëõ×ÖÄ»£¬Ôò´´½¨Ò»¸öÁÙÊ±Ä¿Â¼£¬½«ÏÂÔØµÄ×ÖÄ»È«²¿±£´æµ½ÁÙÊ±Ä¿Â¼
-                # ×îºóÔÙ½øĞĞÑ¹Ëõ
-                temp_output = tempfile.mkdtemp(prefix='tmp_subtitles')
-            videofiles = list(getVedioFileFromDir(args.path))
-            threads = (len(videofiles) / 5) + 1
-            if args.threads:
-                # Èç¹ûÏß³ÌÊı³¬¹ı×ÜµÄÎÄ¼şÊıÄ¿,Ôò´¥·¢Òì³£
-                if args.threads > len(videofiles):    
-                    raise TooManyThreadsError(args.threads, len(videofiles))
-                threads = args.threads
-            # ´òÓ¡ĞÅÏ¢
-            print 'Find %s videos\n' % len(videofiles)
-            task_size, remainder = divmod(len(videofiles), threads)
-            tasks = []
-            for i in range(threads):
-                task = videofiles[i * task_size : (i + 1) * task_size]
-                tasks.append(task)
-            # ½«ÎŞ·¨¾ùÔÈ·ÖÅäµÄÈÎÎñÈ«²¿·ÖÅä¸ø×îºóÒ»¸öÏß³Ì
-            if remainder > 0:
-                tasks[-1].extend(videofiles[-remainder:])
-            thread_list = []
-            for task in tasks:
-                if is_compress:
-                    sub_output = temp_output
+    def run(self):
+        global FIND_SUBS
+        global NO_SUBTITLES
+        for f in self.files:
+            flag = 0
+            for lang in self.languages:
+                sub_info_list = getSubInfo(f, lang)
+                if sub_info_list:
+                    LOCK_FOR_FIND.acquire()
+                    # The total number of subtitles
+                    N = sum([len(sub_info['Files']) for sub_info in sub_info_list])
+                    FIND_SUBS += N
+                    LOCK_FOR_FIND.release()
+                    # get file's basename(and not endswith ext),
+                    # it will use to combining subtitle's filename
+                    basename = os.path.splitext(os.path.basename(f))[0]
+                    if not self.output:
+                        # if self.output is None, then the output directory of 
+                        # subtitles is same as file's os.path.dirname(file)
+                        output = os.path.dirname(f)
+                    else:
+                        relpath = os.path.relpath(os.path.dirname(f), self.root)
+                        output = os.path.join(self.output, relpath)
+                    downloadSubFromSubinfoList(sub_info_list, basename, lang, output)
                 else:
-                    sub_output = output
-                t = DownloadSubThread(task, sub_output, language)
-                thread_list.append(t)
-            [t.start() for t in thread_list]
-            [t.join() for t in thread_list]
-            if is_compress:
-                zipname = 'subtitles'
-                shutil.make_archive(os.path.join(output, zipname), 'zip', temp_output)
-                shutil.rmtree(temp_output)
+                    flag += 1
+            if flag == len(self.languages):
+                # if flag == len(self.languages), that's means
+                # can't find video's subtitle. 
+                LOCK_FOR_NO_SUBTITLES.acquire()
+                NO_SUBTITLES.append(f)
+                LOCK_FOR_NO_SUBTITLES.release()
+    
+    
+
+def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
+    types = mimetypes.guess_type(vediofile)
+    mtype = types[0]
+    if mtype and mtype.split('/')[0] == 'video':
+        # ä¸‹è½½ä¸€ä¸ªå­—å¹•
+        print 'Find 1 video\n'
+        root = os.path.dirname(videofile)
+        t = DownloadSubThread(root, [videofile], output, languages)
+        t.start()
+        t.join()
+    else:
+        print '%s is not a video file' % args.path
+        sys.exit(1)   
+
+def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'],
+                     recursive=False, compress=False):
+    if compress:
+        # å¦‚æœæŒ‡å®šè¦å‹ç¼©å­—å¹•ï¼Œåˆ™åˆ›å»ºä¸€ä¸ªä¸´æ—¶ç›®å½•ï¼Œå°†ä¸‹è½½çš„å­—å¹•å…¨éƒ¨ä¿å­˜åˆ°ä¸´æ—¶ç›®å½•
+        # æœ€åå†è¿›è¡Œå‹ç¼©
+        temp_output = tempfile.mkdtemp(prefix='tmp_subtitles')
+    videofiles = list(getVedioFileFromDir(path, recursive))
+    threads = (len(videofiles) / 2)
+    if threads == 0:
+        threads = 1
+    if num_threads:
+        # å¦‚æœçº¿ç¨‹æ•°è¶…è¿‡æ€»çš„æ–‡ä»¶æ•°ç›®,åˆ™è§¦å‘å¼‚å¸¸
+        if num_threads > len(videofiles):    
+            raise TooManyThreadsError(num_threads, len(videofiles))
+        threads = num_threads
+    # æ‰“å°ä¿¡æ¯
+    print 'Find %s videos\n' % len(videofiles)
+    task_size, remainder = divmod(len(videofiles), threads)
+    tasks = []
+    for i in range(threads):
+        task = videofiles[i * task_size : (i + 1) * task_size]
+        tasks.append(task)
+    # å°†æ— æ³•å‡åŒ€åˆ†é…çš„ä»»åŠ¡å…¨éƒ¨åˆ†é…ç»™æœ€åä¸€ä¸ªçº¿ç¨‹
+    if remainder > 0:
+        tasks[-1].extend(videofiles[-remainder:])
+    thread_list = []
+    for task in tasks:
+        if compress:
+            t = DownloadSubThread(path, task, temp_output, languages)
         else:
-            print '%s is neither a directory nor a file' % args.path
+            t = DownloadSubThread(path, task, output, languages)
+        thread_list.append(t)
+    [t.start() for t in thread_list]
+    [t.join() for t in thread_list]
+    if compress:
+        zipname = 'subtitles'
+        if not output:
+            output = path
+        shutil.make_archive(os.path.join(output, zipname), 'zip', temp_output)
+        shutil.rmtree(temp_output)
+
+def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
+         recursive=False, compress=False):
+    
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            downloadOneSub(path, output, languages)
+
+        elif os.path.isdir(path):
+            downloadManySubs(path, output, num_threads, languages,
+                recursive, compress)
+        else:
+            print '%s is neither a directory nor a file' % path
             sys.exit(1)
 
-        print '\n'
         print '*' * 80
         tmp = 'Finish.find {} subtitles,{} sucessed,{} failed,' + \
               '{} files not found subtitle'
-        print tmp.format(FIND_SUBS, SUCCESSED_SUBS, FAILED_SUBS, len(NO_SUBTITLES))
+        print tmp.format(FIND_SUBS, SUCCESSED_SUBS, FAILED_SUBS,
+                        len(NO_SUBTITLES))
         if NO_SUBTITLES :
             print  "Can't found following video file's subtitles:"
             for f in NO_SUBTITLES:
                 print '  %s' % os.path.basename(f)
     else:
-        # Â·¾¶²»´æÔÚ
-        print '%s Not exists.' % args.path
+        # The path doesn't exists.
+        print '%s Not exists.' % path
         sys.exit(1)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('path', help="The directory contains vedio files")
+    parser.add_argument('-o', '--output', 
+                        help="The output directory of subtitles")
+    parser.add_argument('-c', '--compress', action='store_true', default=False,
+                        help="Whether compress subtitles, only effective " + \
+                        "when argument <path> is a directory and argument " + \
+                        "<recursive> is not given")
+    parser.add_argument('-n', '--threads', type=int,
+                        help="specify number of threads")
+    parser.add_argument('-r', '-R', '--recursive', action='store_true', 
+                        default=False, help="whether recursive directory")
+    parser.add_argument('--lang', choices=['Chn', 'Eng'], type=list,
+                        dest='languages',
+                        help="chice the language of subtitles, it only can be"+\
+                        "'Chn' or 'Eng', if not given, default choose both two")
+
+    args = parser.parse_args()
+    path = args.path
+    output = args.output
+    compress = args.compress
+    threads = args.threads
+    recursive = args.recursive
+    languages = args.languages
+    if languages is None:
+        languages = ['Chn', 'Eng']
+    main(args.path, args.output, args.threads, languages, args.recursive,
+         args.compress)
