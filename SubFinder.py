@@ -70,7 +70,7 @@ def computerVideoHash(videofile):
             hash_result.append(m.hexdigest())
         return ';'.join(hash_result)
 
-def getVedioFileFromDir(dir, recursive=False):
+def getVideoFileFromDir(dir, recursive=False):
     '''从某一目录中获取所有视频文件，返回basename
     '''
     result = []
@@ -235,7 +235,7 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
         # 如果指定要压缩字幕，则创建一个临时目录，将下载的字幕全部保存到临时目录
         # 最后再进行压缩
         temp_output = tempfile.mkdtemp(prefix='tmp_subtitles')
-    videofiles = list(getVedioFileFromDir(path, recursive))
+    videofiles = list(getVideoFileFromDir(path, recursive))
     threads = (len(videofiles) / 2)
     if threads == 0:
         threads = 1
