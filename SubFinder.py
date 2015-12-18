@@ -269,6 +269,8 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
             output = path
         shutil.make_archive(os.path.join(output, zipname), 'zip', temp_output)
         shutil.rmtree(temp_output)
+        print '*' * 80
+        print 'subtitles.zip saving in %s' % os.path.join(output, zipname)
 
 def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
          recursive=False, compress=False):
