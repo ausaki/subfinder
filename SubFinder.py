@@ -11,7 +11,7 @@ import tempfile
 import shutil
 
 GetRequest = requests.get
-PostRequestGet = requests.post
+PostRequest = requests.post
 
 POST_URL = 'https://www.shooter.cn/api/subapi.php'
 
@@ -107,7 +107,7 @@ def getSubInfo(videofile, lang):
                    'pathinfo': pathinfo,
                    'format': format,
                    'lang': lang}
-        res = PostRequestGet(POST_URL, data=payload)
+        res = PostRequest(POST_URL, data=payload)
         if res.content == '\xff':
             return []
         return res.json()
