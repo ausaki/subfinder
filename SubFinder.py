@@ -216,7 +216,7 @@ class DownloadSubThread(threading.Thread):
     
 
 def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
-    types = mimetypes.guess_type(vediofile)
+    types = mimetypes.guess_type(videofile)
     mtype = types[0]
     if mtype and mtype.split('/')[0] == 'video':
         # 下载一个字幕
@@ -303,18 +303,15 @@ def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('path', help="The directory contains vedio files")
-    parser.add_argument('-o', '--output', 
-                        help="The output directory of subtitles")
+    parser.add_argument('-o', '--output', help="The output directory of subtitles")
     parser.add_argument('-c', '--compress', action='store_true', default=False,
                         help="Whether compress subtitles, only effective " + \
-                        "when argument <path> is a directory and argument " + \
-                        "<recursive> is not given")
-    parser.add_argument('-n', '--threads', type=int,
-                        help="specify number of threads")
+                        "when argument <path> is a directory")
+    parser.add_argument('-n', '--threads', type=int, help="specify number of threads")
     parser.add_argument('-r', '-R', '--recursive', action='store_true', 
                         default=False, help="whether recursive directory")
-    parser.add_argument('--lang', choices=['Chn', 'Eng'], type=list,
-                        dest='languages',
+    parser.add_argument('--lang', choices=['Chn', 'Eng'], dest='languages',
+                        nargs=1, default=['Chn', 'Eng'],
                         help="chice the language of subtitles, it only can be"+\
                         "'Chn' or 'Eng', if not given, default choose both two")
 
@@ -325,7 +322,5 @@ if __name__ == '__main__':
     threads = args.threads
     recursive = args.recursive
     languages = args.languages
-    if languages is None:
-        languages = ['Chn', 'Eng']
-    main(args.path, args.output, args.threads, languages, args.recursive,
-         args.compress)
+    # print args
+    main(path, output, threads, languages, recursive, compress)
