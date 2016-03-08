@@ -124,7 +124,7 @@ def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
     '''
     global FAILED_SUBS
     global SUCCESSED_SUBS
-    counters = {'sub': 0, 'idx': 0, 'srt': 0}
+    counters = {'sub': 0, 'idx': 0, 'srt': 0, 'ass': 0}
     for sub_info in sub_info_list:
         subfiles = sub_info['Files']
         delay = sub_info['Delay']
@@ -138,7 +138,7 @@ def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
                     counter = counters.setdefault(ext, 0)
                     counter += 1
                     counters[ext] = counter
-                    n = '' if counters[ext] == 1 else counters[ext]
+                    n = '' if counters[ext] == 1 else counters[ext] - 1
                     subfilename = '{basename}.{lang}{counter}.{ext}'.format(
                         basename=basename,
                         lang=lang.lower(),
@@ -216,12 +216,15 @@ class DownloadSubThread(threading.Thread):
     
 
 def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
+    videofile = os.path.abspath(videofile)
     types = mimetypes.guess_type(videofile)
     mtype = types[0]
     if mtype and mtype.split('/')[0] == 'video':
         # 下载一个字幕
         print 'Find 1 video\n'
         root = os.path.dirname(videofile)
+        if output is None:
+        	output = root
         t = DownloadSubThread(root, [videofile], output, languages)
         t.start()
         t.join()
