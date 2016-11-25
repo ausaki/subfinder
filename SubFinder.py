@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 #-*- coding: utf8 -*-
+from __future__ import print_function
 import hashlib
 import os
 import requests
@@ -9,6 +10,8 @@ import threading
 import argparse
 import tempfile
 import shutil
+
+
 
 GetRequest = requests.get
 PostRequest = requests.post
@@ -48,11 +51,27 @@ class TooManyThreadsError(Exception):
 def getFileSize(filestring_or_fileobj):
     '''return file size in bytes
     '''
-    if isinstance(filestring_or_fileobj, basestring):
+    file_size = 0
+    # major = sys.version_info.major
+    # minor = sys.version_info.minor
+    # if major == 2:
+    #     if isinstance(filestring_or_fileobj, basestring):
+    #         file_stat = os.stat(filestring_or_fileobj)
+    #         file_size = file_stat.st_size
+    #     else:
+    #         file_size = os.fstat(filestring_or_fileobj.fileno())
+    # elif major == 3:
+    #     if isinstance(filestring_or_fileobj, str):
+    #         file_stat = os.stat(filestring_or_fileobj)
+    #         file_size = file_stat.st_size
+    #     else:
+    #         file_size = os.fstat(filestring_or_fileobj.fileno())
+    if isinstance(filestring_or_fileobj, file):
+        file_size = os.fstat(filestring_or_fileobj.fileno()).st_size
+    else:
         file_stat = os.stat(filestring_or_fileobj)
-        return file_stat.st_size
-    stat = os.fstat(filestring_or_fileobj.fileno())
-    return stat.st_size
+        file_size = file_stat.st_size
+    return file_size
 
 def computerVideoHash(videofile):
     seek_positions = [None] * 4
@@ -86,7 +105,7 @@ def getVideoFileFromDir(dir, recursive=False):
     else:
         for f in os.listdir(dir):
             if os.path.isfile(os.path.join(dir, f)):
-                types = mimetypes.guess_type(f)
+                types = mimetypes.guess_type(os.path.join(dir, f))
                 mtype = types[0]
                 if mtype and mtype.split('/')[0] == 'video':
                     append(os.path.abspath(os.path.join(dir, f)))
@@ -145,7 +164,7 @@ def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
                         counter=n,
                         ext=ext)
                     LOCK_FOR_PRINT.acquire()
-                    print '%s' % subfilename
+                    print('%s' % subfilename)
                     LOCK_FOR_PRINT.release()
                     if not os.path.exists(output):
                         os.makedirs(output)
@@ -160,7 +179,7 @@ def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
                 LOCK_FOR_FAILED.acquire()
                 FAILED_SUBS += 1
                 LOCK_FOR_FAILED.release()
-                print e
+                print(e)
     LOCK_FOR_SUCCESSED.acquire()
     SUCCESSED_SUBS += sum(counters.values())
     LOCK_FOR_SUCCESSED.release()
@@ -221,7 +240,7 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
     mtype = types[0]
     if mtype and mtype.split('/')[0] == 'video':
         # 下载一个字幕
-        print 'Find 1 video\n'
+        print('Find 1 video\n')
         root = os.path.dirname(videofile)
         if output is None:
         	output = root
@@ -229,7 +248,7 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
         t.start()
         t.join()
     else:
-        print '%s is not a video file' % args.path
+        print('%s is not a video file' % args.path)
         sys.exit(1)   
 
 def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'],
@@ -248,7 +267,7 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
             raise TooManyThreadsError(num_threads, len(videofiles))
         threads = num_threads
     # 打印信息
-    print 'Find %s videos\n' % len(videofiles)
+    print('Find %s videos\n' % len(videofiles))
     task_size, remainder = divmod(len(videofiles), threads)
     tasks = []
     for i in range(threads):
@@ -272,8 +291,8 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
             output = path
         shutil.make_archive(os.path.join(output, zipname), 'zip', temp_output)
         shutil.rmtree(temp_output)
-        print '*' * 80
-        print 'subtitles.zip saving in %s' % os.path.join(output, zipname)
+        print('*' * 80)
+        print('subtitles.zip saving in %s' % os.path.join(output, zipname))
 
 def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
          recursive=False, compress=False):
@@ -286,21 +305,21 @@ def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
             downloadManySubs(path, output, num_threads, languages,
                 recursive, compress)
         else:
-            print '%s is neither a directory nor a file' % path
+            print('%s is neither a directory nor a file' % path)
             sys.exit(1)
 
-        print '*' * 80
+        print('*' * 80)
         tmp = 'Finish.find {} subtitles,{} sucessed,{} failed,' + \
               '{} files not found subtitle'
-        print tmp.format(FIND_SUBS, SUCCESSED_SUBS, FAILED_SUBS,
-                        len(NO_SUBTITLES))
+        print(tmp.format(FIND_SUBS, SUCCESSED_SUBS, FAILED_SUBS,
+                        len(NO_SUBTITLES)))
         if NO_SUBTITLES :
-            print  "Can't found following video file's subtitles:"
+            print("Can't found following video file's subtitles:")
             for f in NO_SUBTITLES:
-                print '  %s' % os.path.basename(f)
+                print('  %s' % os.path.basename(f))
     else:
         # The path doesn't exists.
-        print '%s Not exists.' % path
+        print('%s Not exists.' % path)
         sys.exit(1)
 
 if __name__ == '__main__':
