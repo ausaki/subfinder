@@ -239,7 +239,7 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
     types = mimetypes.guess_type(videofile)
     mtype = types[0]
 	
-    print ('filetype: %s\n' % (mtype and mtype.split('/')[0]))
+#    print ('filetype: %s\n' % (mtype and mtype.split('/')[0]))
 #    if mtype and mtype.split('/')[0] == 'video' or 'None':
     if checkFile(videofile):
      
