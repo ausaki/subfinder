@@ -238,7 +238,11 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
     videofile = os.path.abspath(videofile)
     types = mimetypes.guess_type(videofile)
     mtype = types[0]
-    if mtype and mtype.split('/')[0] == 'video':
+	
+#    print ('filetype: %s\n' % (mtype and mtype.split('/')[0]))
+#    if mtype and mtype.split('/')[0] == 'video' or 'None':
+    if checkFile(videofile):
+     
         # 下载一个字幕
         print('Find 1 video\n')
         root = os.path.dirname(videofile)
@@ -250,6 +254,30 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
     else:
         print('%s is not a video file' % args.path)
         sys.exit(1)   
+
+def checkFile(path):
+    """Check mimetype and/or file extension to detect valid video file"""
+    if os.path.isfile(path) == False:
+        superPrint("error", "File type error!", "This is not a file:\n<i>" + path + "</i>")
+        return False
+
+    fileMimeType, encoding = mimetypes.guess_type(path)
+    if fileMimeType == None:
+        fileExtension = path.rsplit('.', 1)
+        if fileExtension[1] not in ['avi', 'mp4', 'mov', 'mkv', 'mk3d', 'webm', \
+        'ts', 'mts', 'm2ts', 'ps', 'vob', 'evo', 'mpeg', 'mpg', \
+        'm1v', 'm2p', 'm2v', 'm4v', 'movhd', 'movx', 'qt', \
+        'mxf', 'ogg', 'ogm', 'ogv', 'rm', 'rmvb', 'flv', 'swf', \
+        'asf', 'wm', 'wmv', 'wmx', 'divx', 'x264', 'xvid']:
+            print("error", "File type error!\n", "This file is not a video (unknown mimetype AND invalid file extension):\n" + path )
+            return False
+    else:
+        fileMimeType = fileMimeType.split('/', 1)
+        if fileMimeType[0] != 'video':
+            print("error", "File type error!", "This file is not a video (unknown mimetype):\n" + path)
+            return False
+
+    return True
 
 def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'],
                      recursive=False, compress=False):
