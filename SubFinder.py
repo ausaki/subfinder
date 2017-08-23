@@ -22,10 +22,11 @@ FIND_SUBS = 0                           # 找到的字幕数
 SUCCESSED_SUBS = 0                      # 下载成功的字幕数
 FAILED_SUBS = 0                         # 下载失败的字幕数
 NO_SUBTITLES = []                       # 没有找到字幕的文件列表
+VIDEO_EXTS = ['.mkv', '.mp4', '.ts', '.avi', '.wmv']    # 视频文件扩展名
 
 LOCK_FOR_PRINT = threading.Lock()       # 用于保护print信息时不会出现"乱码"
                                         # (i.e 多行信息出现在同一行)
-LOCK_FOR_NO_SUBTITLES = threading.Lock() 
+LOCK_FOR_NO_SUBTITLES = threading.Lock()
 LOCK_FOR_FIND = threading.Lock()
 LOCK_FOR_SUCCESSED = threading.Lock()
 LOCK_FOR_FAILED = threading.Lock()
@@ -34,7 +35,7 @@ class LanguageError(Exception):
     def __init__(self, msg, *args):
         self.msg = msg
         self.args = args
-    
+
     def __str__(self):
         return '<LanguageError>: Language must be "Eng" or "Chn".' + \
                'Not %s' % self.msg
@@ -47,6 +48,14 @@ class TooManyThreadsError(Exception):
         msg = '<TooManyThreadsError>: Too many thrads,' + \
               'maximum threads is {}, you specify {}'
         return msg.format(self.max_threads, self.threads)
+
+def isVideoFile(file):
+    if os.path.isfile(file):
+        types = mimetypes.guess_type(file)
+        mtype = types[0]
+        if mtype and mtype.split('/')[0] == 'video' or os.path.splitext(file)[1] in VIDEO_EXTS:
+            return True
+    return False
 
 def getFileSize(filestring_or_fileobj):
     '''return file size in bytes
@@ -98,16 +107,11 @@ def getVideoFileFromDir(dir, recursive=False):
         for root, dirs, files in os.walk(dir):
             for filename in files:
                 f = os.path.abspath(os.path.join(root, filename))
-                types = mimetypes.guess_type(f)
-                mtype = types[0]  
-                if mtype and mtype.split('/')[0] == 'video':
+                if isVideoFile(f):
                     append(f)
     else:
         for f in os.listdir(dir):
-            if os.path.isfile(os.path.join(dir, f)):
-                types = mimetypes.guess_type(os.path.join(dir, f))
-                mtype = types[0]
-                if mtype and mtype.split('/')[0] == 'video':
+                if isVideoFile(os.path.join(dir, f)):
                     append(os.path.abspath(os.path.join(dir, f)))
     return result
 
@@ -133,7 +137,7 @@ def getSubInfo(videofile, lang):
 
 def downloadSubFromSubinfoList(sub_info_list, basename, lang, output):
     '''\
-    @param sub_info_list: It's a list of sub_info, 
+    @param sub_info_list: It's a list of sub_info,
         the detail infomation about data structure of sub_info can find on
         <https://docs.google.com/document/d/1ufdzy6jbornkXxsD-OGl3kgWa4P9WO5
         NZb6_QYZiGI0/preview>
@@ -216,7 +220,7 @@ class DownloadSubThread(threading.Thread):
                     # it will use to combining subtitle's filename
                     basename = os.path.splitext(os.path.basename(f))[0]
                     if not self.output:
-                        # if self.output is None, then the output directory of 
+                        # if self.output is None, then the output directory of
                         # subtitles is same as file's os.path.dirname(file)
                         output = os.path.dirname(f)
                     else:
@@ -227,18 +231,15 @@ class DownloadSubThread(threading.Thread):
                     flag += 1
             if flag == len(self.languages):
                 # if flag == len(self.languages), that's means
-                # can't find video's subtitle. 
+                # can't find video's subtitle.
                 LOCK_FOR_NO_SUBTITLES.acquire()
                 NO_SUBTITLES.append(f)
                 LOCK_FOR_NO_SUBTITLES.release()
-    
-    
+
+
 
 def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
-    videofile = os.path.abspath(videofile)
-    types = mimetypes.guess_type(videofile)
-    mtype = types[0]
-    if mtype and mtype.split('/')[0] == 'video':
+    if isVideoFile(videofile):
         # 下载一个字幕
         print('Find 1 video\n')
         root = os.path.dirname(videofile)
@@ -249,7 +250,7 @@ def downloadOneSub(videofile, output=None, languages=['Chn', 'Eng']):
         t.join()
     else:
         print('%s is not a video file' % args.path)
-        sys.exit(1)   
+        sys.exit(1)
 
 def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'],
                      recursive=False, compress=False):
@@ -263,7 +264,7 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
         threads = 1
     if num_threads:
         # 如果线程数超过总的文件数目,则触发异常
-        if num_threads > len(videofiles):    
+        if num_threads > len(videofiles):
             raise TooManyThreadsError(num_threads, len(videofiles))
         threads = num_threads
     # 打印信息
@@ -296,7 +297,7 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
 
 def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
          recursive=False, compress=False):
-    
+
     if os.path.exists(path):
         if os.path.isfile(path):
             downloadOneSub(path, output, languages)
@@ -330,7 +331,7 @@ if __name__ == '__main__':
                         help="Whether compress subtitles, only effective " + \
                         "when argument <path> is a directory")
     parser.add_argument('-n', '--threads', type=int, help="specify number of threads")
-    parser.add_argument('-r', '-R', '--recursive', action='store_true', 
+    parser.add_argument('-r', '-R', '--recursive', action='store_true',
                         default=False, help="whether recursive directory")
     parser.add_argument('--lang', choices=['Chn', 'Eng'], dest='languages',
                         nargs=1, default=['Chn', 'Eng'],
