@@ -13,8 +13,8 @@ import shutil
 
 # python3 不支持內建file对象
 if sys.version_info.major == 3:
-    from io import TextIOWrapper
-    file = TextIOWrapper
+    from io import IOBase
+    file = IOBase
 
 
 session = requests.Session()
@@ -85,7 +85,7 @@ def getFileSize(filestring_or_fileobj):
     #         file_size = file_stat.st_size
     #     else:
     #         file_size = os.fstat(filestring_or_fileobj.fileno())
-    if isinstance(filestring_or_fileobj, file):
+    if isinstance(filestring_or_fileobj, file) or filestring_or_fileobj.fileno:
         file_size = os.fstat(filestring_or_fileobj.fileno()).st_size
     else:
         file_stat = os.stat(filestring_or_fileobj)
@@ -98,8 +98,8 @@ def computerVideoHash(videofile):
     with open(videofile, 'rb') as fp:
         total_size = getFileSize(fp)
         seek_positions[0] = 4096
-        seek_positions[1] = total_size / 3 * 2
-        seek_positions[2] = total_size / 3
+        seek_positions[1] = total_size // 3 * 2
+        seek_positions[2] = total_size // 3
         seek_positions[3] = total_size - 8192
         for pos in seek_positions:
             fp.seek(pos, 0)
@@ -310,10 +310,10 @@ def main(path, output=None, num_threads=None, languages=['Chn', 'Eng'],
 
     if os.path.exists(path):
         if os.path.isfile(path):
-            downloadOneSub(path, output, languages)
+            downloadOneSub(os.path.abspath(path), output, languages)
 
         elif os.path.isdir(path):
-            downloadManySubs(path, output, num_threads, languages,
+            downloadManySubs(os.path.abspath(path), output, num_threads, languages,
                 recursive, compress)
         else:
             print('%s is neither a directory nor a file' % path)
