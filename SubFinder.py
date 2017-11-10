@@ -11,10 +11,20 @@ import argparse
 import tempfile
 import shutil
 
+# python3 不支持內建file对象
+if sys.version_info.major == 3:
+    from io import TextIOWrapper
+    file = TextIOWrapper
 
 
-GetRequest = requests.get
-PostRequest = requests.post
+session = requests.Session()
+# session.verify = False
+
+def GetRequest(*args, **kwargs):
+    return session.get(*args, **kwargs)
+
+def PostRequest(*args, **kwargs):
+    return session.post(*args, **kwargs)
 
 POST_URL = 'https://www.shooter.cn/api/subapi.php'
 
