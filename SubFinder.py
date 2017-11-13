@@ -269,7 +269,7 @@ def downloadManySubs(path, output=None, num_threads=None,languages=['Chn', 'Eng'
         # 最后再进行压缩
         temp_output = tempfile.mkdtemp(prefix='tmp_subtitles')
     videofiles = list(getVideoFileFromDir(path, recursive))
-    threads = (len(videofiles) / 2)
+    threads = (len(videofiles) // 2)
     if threads == 0:
         threads = 1
     if num_threads:
