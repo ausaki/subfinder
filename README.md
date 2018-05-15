@@ -1,6 +1,6 @@
 # SubFinder 字幕查找器
 
-SubFinder 是一个字幕下载器，可以自动查找字幕并下载。
+SubFinder 是一个字幕查找器，可以自动查找字幕并下载。
 
 目前 SubFinder 只支持通过射手字幕网提供的 API 进行字幕查找，不过 SubFinder 支持自定义字幕查找器，详情参考[扩展](#扩展)
 
@@ -29,8 +29,6 @@ SubFinder 是一个字幕下载器，可以自动查找字幕并下载。
 
 ## 使用
 
-### 安装
-
 - `git clone https://github.com/ausaki/subfinder`
 
 - `cd subfinder`
@@ -38,6 +36,7 @@ SubFinder 是一个字幕下载器，可以自动查找字幕并下载。
 - `pip install .`
 
 - `subfinder /path/to/videofile` or `python main.py /path/to/directory_contains_video`
+
 
 ### 参数说明
 ```
