@@ -16,7 +16,11 @@ SubFinder 是一个字幕查找器，可以自动查找字幕并下载。
 - 自动将字幕文件重命名为视频文件名，方便播放器自动加载字幕
 
 
-## 依赖
+## 安装方法
+
+**注意：此安装方法仅适用于具有 Python 环境的系统**
+
+**依赖**
 
 - python3
 
@@ -27,40 +31,89 @@ SubFinder 是一个字幕查找器，可以自动查找字幕并下载。
 - gevent
 
 
-## 使用
+使用自带工具安装
 
 - `git clone https://github.com/ausaki/subfinder`
 
-- `cd subfinder`
-
-- `pip install .`
-
-- `subfinder /path/to/videofile` or `python main.py /path/to/directory_contains_video`
+- `python setup.py install`
 
 
-### 参数说明
+使用 pip 安装
+
+`pip install git+https://github.com/ausaki/subfinder`
+
+或者
+
+`pip install subfinder`
+
+
+## 使用方法
+
+**注意：此使用方法仅适用于具有 Python 环境的系统**
+
+安装完成之后，会在 Python 的 scripts 目录下添加一个叫做 subfinder 的可执行文件。
+
+在 unix-like 系统中，scripts 目录一般是 `/usr/local/bin`，在 Windows 系统中，scripts 目录一般是 `C:\python\scripts\`。在 Windows 系统中需要将`C:\python\scripts\` 加入到 `PATH` 中（一般安装 Python 时已经添加了）。
+
+
+### 命令行
+
+查找单个视频的字幕
+
+    `subfinder /path/to/videofile` 
+
+查找目录下所有视频的字幕（递归目录）
+
+    `subfinder /path/to/directory_contains_video`
+
+参数说明
+
 ```
 $ subfinder -h
-usage: subfinder [-h] [-o OUTPUT] [-c] [-n THREADS] [-r] [--lang {Chn,Eng}]
+usage: subfinder [-h] [-l LANGUAGES [LANGUAGES ...]] [-e EXTS [EXTS ...]]
+                 [-m METHOD] [-s]
                  path
 
 positional arguments:
-  path                  The directory contains vedio files
+  path                  the video's filename or the directory contains vedio
+                        files
 
 optional arguments:
   -h, --help            show this help message and exit
-  -o OUTPUT, --output OUTPUT
-                        The output directory of subtitles
-  -c, --compress        Whether compress subtitles, only effective when
-                        argument <path> is a directory
-  -n THREADS, --threads THREADS
-                        specify number of threads
-  -r, -R, --recursive   whether recursive directory
-  --lang {Chn,Eng}      chice the language of subtitles, it only can be'Chn'
-                        or 'Eng', if not given, default choose both two
+  -l LANGUAGES [LANGUAGES ...], --languages LANGUAGES [LANGUAGES ...]
+                        what's languages of subtitle you want to find
+  -e EXTS [EXTS ...], --exts EXTS [EXTS ...]
+                        what's format of subtitle you want to find
+  -m METHOD, --method METHOD
+                        what's method you want to use to searching subtitles,
+                        defaults to ShooterSubSearcher. only support
+                        ShooterSubSearcher for now.
+  -s, --silence         don't print anything, default to False
 
 ```
 
+### GUI
+
+
+### Windows右键菜单
+
+通过注册表的方式添加右键菜单，使用时选中视频文件或者文件夹，然后点击右键选择查找字幕。
+
+- 下载[注册表文件](https://raw.githubusercontent.com/ausaki/subfinder/master/windows/subfinder.reg)，
+
+- 双击注册表文件 subfinder.reg 即可添加注册表到系统中。
+
+### MacOS
+
+在 MacOS 中，通过 Service 和 Automator 实现类似于 Windows 中的右键菜单功能。
+
+- 下载[workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/macos/subfinder.workflow.tar.gz)。
+
+- 解压 subfinder.workflow.tar.gz。
+
+- 将解压出的 subfinder.workflow 复制到/Users/YourName/Library/Services。
+
+- 选中视频文件或目录，右键弹出菜单，选择“服务（Services）” -> “查找字幕”。
 
 ## 注意事项
 
@@ -68,7 +121,7 @@ optional arguments:
 
 - 射手字幕网 API 返回的字幕可能出现“语言不一致”问题（指定查找英文字幕却返回中文字幕）
 
-- ...
+- 请使用系统自带的 Python 环境安装 SubFinder，如果使用虚拟环境，会导致**右键菜单**失效。如果一定要使用虚拟环境安装，可以在PATH 中的其中一个目录（如：/usr/local/bin）中建立 subfinder 的软连接。
 
 
 ## 扩展

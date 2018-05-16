@@ -5,6 +5,7 @@ try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
+import shutil
 
 version = ''
 ahthor = ''
@@ -35,6 +36,8 @@ setup(name='SubFinder',
       author=author,
       url='https://github.com/ausaki/subfinder/',
       packages=['subfinder'],
-      scripts=['scripts/subfinder.py'],
+      scripts=['scripts/subfinder'],
       install_requires=requires,
       )
+
+shutil.copy('scripts/subfinder')

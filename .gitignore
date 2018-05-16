@@ -1,5 +1,6 @@
 .vscode/
 dist/
+build/
 SubFinder.egg-info/
 *.py[co]
 *.log
