@@ -91,11 +91,7 @@ optional arguments:
   -s, --silence         don't print anything, default to False
 
 ```
-
-### GUI
-
-
-### Windows右键菜单
+### Windows 右键菜单
 
 通过注册表的方式添加右键菜单，使用时选中视频文件或者文件夹，然后点击右键选择查找字幕。
 
@@ -103,7 +99,7 @@ optional arguments:
 
 - 双击注册表文件 subfinder.reg 即可添加注册表到系统中。
 
-### MacOS
+### MacOS 右键菜单
 
 在 MacOS 中，通过 Service 和 Automator 实现类似于 Windows 中的右键菜单功能。
 
@@ -114,6 +110,11 @@ optional arguments:
 - 将解压出的 subfinder.workflow 复制到/Users/YourName/Library/Services。
 
 - 选中视频文件或目录，右键弹出菜单，选择“服务（Services）” -> “查找字幕”。
+
+### GUI
+
+TODO
+
 
 ## 注意事项
 
