@@ -1,4 +1,7 @@
-from gevent import monkey; monkey.patch_all()
+# -*- coding: utf8 -*-
+
+from gevent import monkey
+monkey.patch_all()
 import os
 import sys
 import logging
@@ -9,30 +12,32 @@ import random
 import time
 import json
 import sqlite3
-from abc import ABC, abstractclassmethod
+from abc import abstractmethod, ABCMeta
 from gevent.pool import Pool
 import requests
 from . import exceptions
 
-class BaseSubSearcher(ABC):
+
+class BaseSubSearcher(object):
     """ The abstract class for search subtitles.
 
     You must implement following methods:
     - search_subs
     """
+    __metaclass__ = ABCMeta
 
     SUPPORT_LANGUAGES = []
     SUPPORT_EXTS = []
 
-    @abstractclassmethod
+    @abstractmethod
     def search_subs(self, videofile, languages, exts, *args, **kwargs):
         """ search subtitles of videofile.
-        
+
         `videofile` is the absolute(or relative) path of the video file.
 
         `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
         implemention of subclass. `languages` accepts one language or a list of language
-        
+
         `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
         depende on implemention of subclass. `ext` accepts one ext or a list of ext
 
@@ -58,13 +63,15 @@ class BaseSubSearcher(ABC):
     def _check_languages(self, languages):
         for lang in languages:
             if lang not in self.SUPPORT_LANGUAGES:
-                raise exceptions.LanguageError('{} don\'t support {} language'.format(self.__class__.__name__, lang))
-    
+                raise exceptions.LanguageError(
+                    '{} don\'t support {} language'.format(self.__class__.__name__, lang))
+
     def _check_exts(self, exts):
         for ext in exts:
             if ext not in self.SUPPORT_EXTS:
-                raise exceptions.ExtError('{} don\'t support {} ext'.format(self.__class__.__name__, lang))
-    
+                raise exceptions.ExtError(
+                    '{} don\'t support {} ext'.format(self.__class__.__name__, lang))
+
 
 class ShooterSubSearcher(BaseSubSearcher):
     """ find subtitles from shooter.org
@@ -74,9 +81,9 @@ class ShooterSubSearcher(BaseSubSearcher):
     API_URL = 'https://www.shooter.cn/api/subapi.php'
     SUPPORT_LANGUAGES = ['Chn', 'Eng']
     SUPPORT_EXTS = ['ass', 'srt']
-    
+
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super(ShooterSubSearcher, self).__init__(*args, **kwargs)
         self.session = requests.Session()
 
     def search_subs(self, videofile, languages=None, exts=None):
@@ -105,7 +112,7 @@ class ShooterSubSearcher(BaseSubSearcher):
                    'pathinfo': basename,
                    'format': 'json',
                    'lang': ''}
-        
+
         result = {}
         for language in languages:
             payload['lang'] = language
@@ -135,19 +142,17 @@ class ShooterSubSearcher(BaseSubSearcher):
                         })
                         ext_set.add(ext_)
         return subinfos
-                
+
     def _gen_subname(self, videofile, language, ext):
         """ generate filename of subtitles
         :TODO: fix the conflict of subname
         """
         root, basename = os.path.split(videofile)
         name, _ = os.path.splitext(basename)
-        unique = os.urandom(4).hex()
-        unique = os.urandom(4).hex()
         subname = '{basename}.{language}.{ext}'.format(
-        basename=name, 
-        language=language,
-        ext=ext)
+            basename=name,
+            language=language,
+            ext=ext)
         p = os.path.join(root, subname)
         return p
 
@@ -172,7 +177,7 @@ class ShooterSubSearcher(BaseSubSearcher):
                 data = fp.read(4096)
                 m = hashlib.md5(data)
                 hash_result.append(m.hexdigest())
-        return ';'.join(hash_result)    
+        return ';'.join(hash_result)
 
 
 class SubFinder(object):
@@ -180,10 +185,9 @@ class SubFinder(object):
     """
 
     VIDEO_EXTS = ['.mkv', '.mp4', '.ts', '.avi', '.wmv']
-    
+
     def __init__(self, path='./', languages=None, exts=None, subsearcher_class=None, **kwargs):
-        path = os.path.abspath(path)
-        self.path = path
+        self.set_path(path)
         self.languages = languages
         self.exts = exts
 
@@ -193,6 +197,8 @@ class SubFinder(object):
 
         # silence: dont print anything
         self.silence = kwargs.get('silence', False)
+        # logger's output
+        self.logger_output = kwargs.get('logger_output', sys.stdout)
 
         self._init_session()
         self._init_gevent_pool()
@@ -216,11 +222,12 @@ class SubFinder(object):
         """
         if self._is_videofile(path):
             return [path, ]
-        
+
         if os.path.isdir(path):
             result = []
             for root, dirs, files in os.walk(path):
-                result.extend(filter(self._is_videofile, map(lambda f: os.path.join(root, f), files)))
+                result.extend(filter(self._is_videofile, map(
+                    lambda f: os.path.join(root, f), files)))
             return result
         else:
             return []
@@ -230,7 +237,7 @@ class SubFinder(object):
         """
         self.session = requests.Session()
         self.session.mount('http://', adapter=requests.adapters.HTTPAdapter(
-            pool_connections=10, 
+            pool_connections=10,
             pool_maxsize=100))
 
     def _init_gevent_pool(self):
@@ -239,18 +246,20 @@ class SubFinder(object):
     def _init_logger(self):
         self._devnull = open(os.devnull, 'w')
         self._old_stderr = sys.stderr
-        
+
         if self.silence:
             sys.stderr = self._devnull
-        
+
         self.logger = logging.getLogger('SubFinder')
+        self.logger.handlers = []
         self.logger.setLevel(logging.DEBUG)
-        s = sys.stdout
+        s = self.logger_output
         if self.silence:
             s = self._devnull
         sh = logging.StreamHandler(stream=s)
         sh.setLevel(logging.DEBUG)
-        formatter = logging.Formatter('[%(asctime)s]-[%(levelname)s]: %(message)s', datefmt='%m/%d %H:%M:%S')
+        formatter = logging.Formatter(
+            '[%(asctime)s]-[%(levelname)s]: %(message)s', datefmt='%m/%d %H:%M:%S')
         sh.setFormatter(formatter)
         self.logger.addHandler(sh)
 
@@ -277,8 +286,8 @@ class SubFinder(object):
                 content TEXT)
         ''')
         content = json.dumps(self._history)
-        cursor.execute('INSERT INTO history(create_at, content) VALUES(?, ?)', 
-            (int(time.time()), content))
+        cursor.execute('INSERT INTO history(create_at, content) VALUES(?, ?)',
+                       (int(time.time()), content))
         conn.commit()
         cursor.close()
         conn.close()
@@ -287,9 +296,11 @@ class SubFinder(object):
         basename = os.path.basename(videofile)
         self.logger.info('Start search subtitles of {}'.format(basename))
         try:
-            subinfos = self.subsearcher.search_subs(videofile, self.languages, self.exts)
+            subinfos = self.subsearcher.search_subs(
+                videofile, self.languages, self.exts)
         except exceptions.SearchingSubinfoError as e:
-            self.logger.error('search subinfo of {} happening error: {}'.format(basename, str(e)))
+            self.logger.error(
+                'search subinfo of {} happening error: {}'.format(basename, str(e)))
             return
         except exceptions.InvalidFileError as e:
             self.logger.error(str(e))
@@ -298,7 +309,8 @@ class SubFinder(object):
             self.logger.error(e)
             return
 
-        self.logger.info('Find {} subtitles for {}, prepare to download'.format(len(subinfos), basename))
+        self.logger.info('Find {} subtitles for {}, prepare to download'.format(
+            len(subinfos), basename))
         try:
             for subinfo in subinfos:
                 link = subinfo['link']
@@ -317,12 +329,17 @@ class SubFinder(object):
         except Exception as e:
             self.logger.error(str(e))
 
+    def set_path(self, path):
+        path = os.path.abspath(path)
+        self.path = path
+
     def start(self):
         self.logger.info('Start')
         videofiles = self._filter_path(self.path)
         l = len(videofiles)
         if l == 0:
-            self.logger.info("Doesn't find any video files in {}".format(self.path))
+            self.logger.info(
+                "Doesn't find any video files in {}".format(self.path))
             return
         else:
             self.logger.info('Find {} video files'.format(l))
@@ -334,8 +351,12 @@ class SubFinder(object):
         self._save_history()
         self.logger.info('Done! enjoying the movies!')
 
+    def done(self):
+        self.recovery_stderr()
+
     def remove_subtitles(self):
         pass
+
 
 def find_method(m):
     g = globals()
@@ -345,13 +366,14 @@ def find_method(m):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('path', help="the video's filename or the directory contains vedio files")
+    parser.add_argument(
+        'path', help="the video's filename or the directory contains vedio files")
     parser.add_argument('-l', '--languages',
                         nargs='+',
                         help="what's languages of subtitle you want to find")
     parser.add_argument('-e', '--exts',
                         nargs='+',
-                        help="what's format of subtitle you want to find")         
+                        help="what's format of subtitle you want to find")
     parser.add_argument('-m', '--method',
                         type=find_method, default=ShooterSubSearcher,
                         help='''what's method you want to use to searching subtitles, defaults to ShooterSubSearcher.
@@ -363,13 +385,14 @@ def main():
 
     args = parser.parse_args()
 
-    subfinder = SubFinder(path=args.path, 
-        languages=args.languages, 
-        exts=args.exts, 
-        subsearcher_class=args.method,
-        silence=args.silence)
+    subfinder = SubFinder(path=args.path,
+                          languages=args.languages,
+                          exts=args.exts,
+                          subsearcher_class=args.method,
+                          silence=args.silence)
     subfinder.start()
-    subfinder.recovery_stderr()
+    subfinder.done()
+
 
 if __name__ == '__main__':
     main()

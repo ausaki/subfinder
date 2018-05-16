@@ -1,0 +1,3 @@
+subfinder
+py2app
+py2exe
