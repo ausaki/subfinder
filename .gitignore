@@ -2,5 +2,6 @@
 dist/
 build/
 SubFinder.egg-info/
+subfinder.workflow/
 *.py[co]
 *.log
