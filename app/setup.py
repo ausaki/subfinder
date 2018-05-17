@@ -9,6 +9,7 @@ try:
 except ImportError:
     from distutils.core import setup
 import sys
+import shutil
 
 APP = ['app.py']
 
@@ -32,3 +33,10 @@ setup(
     name="SubFinder",
     **extra_options
 )
+
+if sys.platform == 'darwin':
+    shutil.make_archive('./dist/SubFinder.app', format='gztar', root_dir='./dist', base_dir='./')
+elif sys.platform == 'win32':
+    shutil.make_archive('./dist/SubFinder.exe', format='gztar', root_dir='./dist', base_dir='./')
+
+
