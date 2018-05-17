@@ -95,7 +95,7 @@ optional arguments:
 
 通过注册表的方式添加右键菜单，使用时选中视频文件或者文件夹，然后点击右键选择查找字幕。
 
-- 下载[注册表文件](https://raw.githubusercontent.com/ausaki/subfinder/master/windows/subfinder.reg)，
+- 下载[注册表文件](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.reg)，
 
 - 双击注册表文件 subfinder.reg 即可添加注册表到系统中。
 
@@ -103,7 +103,7 @@ optional arguments:
 
 在 MacOS 中，通过 Service 和 Automator 实现类似于 Windows 中的右键菜单功能。
 
-- 下载[workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/macos/subfinder.workflow.tar.gz)。
+- 下载[workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.workflow.tar.gz)。
 
 - 解压 subfinder.workflow.tar.gz。
 
@@ -111,9 +111,16 @@ optional arguments:
 
 - 选中视频文件或目录，右键弹出菜单，选择“服务（Services）” -> “查找字幕”。
 
-### GUI
 
-TODO
+## 图形界面
+
+为了方便 Windows 和 MacOS 用户，使用 Python 自带的 Tkinter 写了一个简单的app。
+
+[下载页面](https://github.com/ausaki/subfinder/releases)
+
+[Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/0.0.2/SubFinder.exe)
+
+[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/0.0.2/SubFinder.app)
 
 
 ## 注意事项
