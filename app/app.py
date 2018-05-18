@@ -1,20 +1,38 @@
 #-*- coding: utf8 -*-
-
 import sys
-if sys.version_info[0] == 2:
-    import Tkinter as tk
-    import tkFileDialog as filedialog, tkMessageBox as messagebox
-else:
+try:
     import tkinter as tk
     from tkinter import filedialog, messagebox
-from subfinder.subfinder import SubFinder
+    from queue import Queue, Empty
+except ImportError as e:
+    import Tkinter as tk
+    import tkFileDialog as filedialog, tkMessageBox as messagebox
+    from Queue import Queue, Empty
+from threading import Thread
+import os
+from subfinder.subfinder_thread import SubFinderThread as SubFinder
+os.environ["REQUESTS_CA_BUNDLE"] = "./assets/cacert.pem"
+
 
 class OutputStream():
     def __init__(self, text_widget):
         self.text = text_widget
+        self.msg_queue = Queue(100)
     
+    def display(self):
+        while True:
+            try:
+                msg = self.msg_queue.get(block=False)
+            except Empty as e:
+                break
+            else:
+                self.text.configure(state='normal')
+                self.text.insert(tk.END, msg)
+                self.text.configure(state='disabled')
+                self.text.yview(tk.END)
+
     def write(self, text):
-        self.text.insert(tk.END, text)
+        self.msg_queue.put(text)
     
     def writeline(self, line):
         self.write(line + '\n')
@@ -48,8 +66,14 @@ class Application(tk.Frame, object):
         if not self.videofile:
             messagebox.showwarning('提示', '请先选择视频文件或目录')
             return
-        subfinder = SubFinder(path=self.videofile, logger_output=self._output)
-        subfinder.start()
+
+        def start(path, *args, **kwargs):
+            subfinder = SubFinder(path=path, *args, **kwargs)    
+            subfinder.start()
+            subfinder.done()
+        
+        t = Thread(target=start, args=[self.videofile, ], kwargs=dict(logger_output=self._output))
+        t.start()
 
     def _open_file(self):
         self._open('file')
@@ -67,6 +91,10 @@ class Application(tk.Frame, object):
             self.videofile = filedialog.askdirectory(initialdir='~/Downloads/test',
                                                      title="选择一个目录")
         self.label_selected['text'] = self.videofile
+    
+    def _display_msg(self):
+        self._output.display()
+        self.after(100, self._display_msg)
 
     def _create_widgets(self):
         self.button_open_file = tk.Button(
@@ -99,6 +127,7 @@ class Application(tk.Frame, object):
         # tk.Grid.columnconfigure(frame, 1, weight=1)
         frame.grid(row=3, column=0, columnspan=2, pady=20, sticky='nswe')
         self._output = OutputStream(self.text_logger)
+        self.after(100, self._display_msg)
 
         tk.Grid.rowconfigure(self, 3, weight=1)
         tk.Grid.columnconfigure(self, 0, weight=1)

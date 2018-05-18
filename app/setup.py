@@ -11,13 +11,20 @@ except ImportError:
 import sys
 import shutil
 
+cert_file = 'assets/cacert.pem'
+
 APP = ['app.py']
 
 if sys.platform == 'darwin':
     extra_options = dict(
         setup_requires=['py2app'],
         app=APP,
-        options=dict(py2app=dict(argv_emulation=True)),
+        options=dict(
+            py2app=dict(
+                argv_emulation=True, 
+                resources=','.join([cert_file, ])
+            )
+        ),
     )
 elif sys.platform == 'win32':
     extra_options = dict(

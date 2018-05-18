@@ -118,9 +118,9 @@ optional arguments:
 
 [下载页面](https://github.com/ausaki/subfinder/releases)
 
-[Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/0.0.2/SubFinder.exe)
+[Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.3/SubFinder.exe.tar.gz)
 
-[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/0.0.2/SubFinder.app)
+[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.3/SubFinder.app.tar.gz)
 
 
 ## 注意事项
@@ -154,11 +154,11 @@ SubFinder 是一个通用的字幕查找器，它包含两个主要的类：
 
             注意：SUBNAME指的是字幕文件名（即保存路径），最好是绝对路径
 
-为了实现你自己的字幕搜索器，只需要在 subfinder.py 中创建一个继承自`BaseSubSearcher`的类，实现`search_subs`方法，重写SUPPORT_LANGUAGES和SUPPORT_EXTS，然后在命令行参数中指定`-m`为该类的名称
+为了实现你自己的字幕搜索器，只需要在 subsearcher.py 中创建一个继承自`BaseSubSearcher`的类，实现`search_subs`方法，重写SUPPORT_LANGUAGES和SUPPORT_EXTS，然后在命令行参数中指定`-m`为该类的名称
 
 ### 示例
 ```
-# subfinder.py
+# subsearcher.py
 
 class MySubSearch(BaseSubSearch):
 
@@ -176,7 +176,7 @@ class MySubSearch(BaseSubSearch):
 
 
 # 使用 MySubSearcher 搜索字幕
-python main.py /path/to/videofile -m MySubSearcher
+python -m subfinder.run /path/to/videofile -m MySubSearcher
 
 ```
 
