@@ -120,7 +120,7 @@ optional arguments:
 
 [Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.3/SubFinder.exe.tar.gz)
 
-[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.3/SubFinder.app.tar.gz)
+[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.4/SubFinder.app.tar.gz)
 
 
 ## 注意事项
