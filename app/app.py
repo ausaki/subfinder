@@ -11,8 +11,9 @@ except ImportError as e:
 from threading import Thread
 import os
 from subfinder.subfinder_thread import SubFinderThread as SubFinder
-os.environ["REQUESTS_CA_BUNDLE"] = "./assets/cacert.pem"
-
+cacert_file = 'cacert.pem'
+if os.path.exists(cacert_file):
+    os.environ['REQUESTS_CA_BUNDLE'] = 'cacert.pem'
 
 class OutputStream():
     def __init__(self, text_widget):
