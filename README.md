@@ -118,9 +118,9 @@ optional arguments:
 
 [下载页面](https://github.com/ausaki/subfinder/releases)
 
-[Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.3/SubFinder.exe.tar.gz)
+[Windows, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.5/SubFinder.exe.tar.gz)
 
-[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.4/SubFinder.app.tar.gz)
+[MaxOS, 直接点击这里下载](https://github.com/ausaki/subfinder/releases/download/v0.0.5/SubFinder.app.tar.gz)
 
 
 ## 注意事项
