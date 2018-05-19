@@ -101,9 +101,9 @@ optional arguments:
 
 ### MacOS 右键菜单
 
-在 MacOS 中，通过 Service 和 Automator 实现类似于 Windows 中的右键菜单功能。
+在 MacOS 中，通过 Automator 的 Service 实现类似于 Windows 中的右键菜单功能。
 
-- 下载[workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.workflow.tar.gz)。
+- [下载workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.workflow.tar.gz)。
 
 - 解压 subfinder.workflow.tar.gz。
 
@@ -111,6 +111,9 @@ optional arguments:
 
 - 选中视频文件或目录，右键弹出菜单，选择“服务（Services）” -> “查找字幕”。
 
+如果想要了解如何配置 workerflow，可以参考:
+- [MacOs Automator 帮助](https://support.apple.com/zh-cn/guide/automator/welcome/mac)
+- [stackexchange 的这篇回答](https://apple.stackexchange.com/questions/238948/osx-how-to-add-a-right-click-option-in-folder-to-open-the-folder-with-an-applic?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
 
 ## 图形界面
 
@@ -129,7 +132,9 @@ optional arguments:
 
 - 射手字幕网 API 返回的字幕可能出现“语言不一致”问题（指定查找英文字幕却返回中文字幕）
 
-- 请使用系统自带的 Python 环境安装 SubFinder，如果使用虚拟环境，会导致**右键菜单**失效。如果一定要使用虚拟环境安装，可以在PATH 中的其中一个目录（如：/usr/local/bin）中建立 subfinder 的软连接。
+- 请使用系统自带的 Python 环境安装 SubFinder，如果使用虚拟环境，会导致**右键菜单**失效（路劲错误，找不到 subfinder）。如果出现此类错误，可以在 `/usr/local/bin` 中建立 subfinder 的软连接。
+
+    `ln -s /path/to/real/subfinder /usr/local/bin/subfinder`
 
 
 ## 扩展
