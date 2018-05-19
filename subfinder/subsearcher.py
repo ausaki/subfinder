@@ -47,17 +47,19 @@ class BaseSubSearcher(object):
         """
         pass
 
-    def _check_languages(self, languages):
+    @classmethod
+    def _check_languages(cls, languages):
         for lang in languages:
-            if lang not in self.SUPPORT_LANGUAGES:
+            if lang not in cls.SUPPORT_LANGUAGES:
                 raise exceptions.LanguageError(
-                    '{} don\'t support {} language'.format(self.__class__.__name__, lang))
+                    '{} don\'t support {} language'.format(cls.__name__, lang))
 
-    def _check_exts(self, exts):
+    @classmethod
+    def _check_exts(cls, exts):
         for ext in exts:
-            if ext not in self.SUPPORT_EXTS:
+            if ext not in cls.SUPPORT_EXTS:
                 raise exceptions.ExtError(
-                    '{} don\'t support {} ext'.format(self.__class__.__name__, lang))
+                    '{} don\'t support {} ext'.format(cls.__name__, ext))
 
 
 class ShooterSubSearcher(BaseSubSearcher):
@@ -130,7 +132,8 @@ class ShooterSubSearcher(BaseSubSearcher):
                         ext_set.add(ext_)
         return subinfos
 
-    def _gen_subname(self, videofile, language, ext):
+    @staticmethod
+    def _gen_subname(videofile, language, ext):
         """ generate filename of subtitles
         :TODO: fix the conflict of subname
         """
@@ -143,7 +146,8 @@ class ShooterSubSearcher(BaseSubSearcher):
         p = os.path.join(root, subname)
         return p
 
-    def _compute_video_hash(self, videofile):
+    @staticmethod
+    def _compute_video_hash(videofile):
         """ compute videofile's hash
         reference: https://docs.google.com/document/d/1w5MCBO61rKQ6hI5m9laJLWse__yTYdRugpVyz4RzrmM/preview
         """
