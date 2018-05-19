@@ -116,8 +116,14 @@ class SubFinder(object):
             root = os.path.dirname(self.path)
         else:
             root = self.path
-        dbname = '.subfinder_history.db'
-        conn = sqlite3.connect(os.path.join(root, dbname))
+        dbname = os.path.join(root, '.subfinder_history.db')
+        if sys.version_info.major == 2 and isinstance(dbname, str):
+            try:
+                dbname = dbname.decode(sys.getfilesystemencoding()) 
+            except UnicodeDecodeError as e:
+                self.logger.warn('Please cheking "path" argument. if "path" contains chinese characters, please replace these characters with alphabets and try run again')
+                return
+        conn = sqlite3.connect(dbname)
         cursor = conn.cursor()
         # create table
         cursor.execute('''
@@ -126,7 +132,10 @@ class SubFinder(object):
                 create_at INTEGER,
                 content TEXT)
         ''')
-        content = json.dumps(self._history)
+        if sys.version_info.major == 2:
+            content = json.dumps(self._history, encoding=sys.getfilesystemencoding())
+        else:
+            content = json.dumps(self._history)
         cursor.execute('INSERT INTO history(create_at, content) VALUES(?, ?)',
                        (int(time.time()), content))
         conn.commit()
