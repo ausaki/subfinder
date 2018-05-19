@@ -9,4 +9,4 @@ if [ $env == "production" ]; then
 else
     pyi-makespec -n SubFinder -w -p "../"  app.py
 fi
-mv SubFinder.spec SubFinder.win.spec
+mv SubFinder.spec SubFinder.macos.spec

@@ -1,167 +1,77 @@
 # Tkinter GUI app
 
-这是一个使用 Tkinter 对 SubFinder 进行了一层封装的 app，可以通过 py2app 或者 py2exe 打包成独立的 app。
+这是一个使用 Tkinter 对 SubFinder 进行了一层封装的 app，可以通过 pyinstaller 打包成独立的 app。
 
-# py2app 用法
+**注意：0.0.7版本以后不在支持 py2app 打包**
 
-`python app.py`
 
-# 打包 app
+# pyinstaller 用法
 
 ## MacOS
 
-- `pip install py2app`
+1. 创建 SubFinder.macos.spec
+    
+    `bash make_spec.sh`
 
-- `python setup.py py2app`
+    make_spec.sh 会在当前目录创建 SubFinder.macos.spec 文件。
 
-打包好的 SubFinder.app 在 dist 目录下，在 Finder 中双击SubFinder.app 即可运行。
+2. 修改 SubFinder.macos.spec（可选）
+
+    1. 支持高分屏
+        
+        找到下面这段代码
+        
+        ```
+        app = BUNDLE(exe,
+                name='SubFinder.app',
+                icon=None,
+                bundle_identifier=None)
+        ```
+        
+        改为
+        
+        ```
+        app = BUNDLE(exe,
+                name='SubFinder.app',
+                icon=None,
+                bundle_identifier=None,
+                info_plist={
+                    'NSHighResolutionCapable': 'True'
+                })
+        ```
+    2. 压缩打包
+
+        在 import 处添加
+        
+        `import shutil`
+
+        在文件末尾添加
+
+        ```
+        shutil.make_archive('./dist/SubFinder.app', format='gztar',
+                    root_dir='./dist', base_dir='./')
+        ```
+
+3. 创建 app
+
+    `bash build.sh`
+
+    创建好的 SubFinder.app 放在 dist 目录下，同时还创建了一份压缩文件 SubFinder.app.tar.gz。
+
+**SubFinder.macos.spec 是已经修改好的文件，所以可以跳过第1步和第2步**
 
 ## Windows
 
-**注意：我在 windows 上一直打包失败**
-
-- `pip install py2exe`
-
-- `python setup.py py2exe`
-
-打包好的 SubFinder.exe 在 dist 目录下，双击 SubFinder.exe 即可运行。
-
-
-
-# 问题
-
-在使用 py2app 打包过程中遇到的问题：
-
-1. gevent 兼容性问题
-
-    SubFinder 最初使用 gevent 进行并发下载字幕。当运行打包好的 SubFinder.app 时，出现“ModuleNotFoundError”的错误，尝试了网上的几个解决方案均无效。
-
-    ```
-    错误信息如下，删掉了一部分调用栈信息
-    ...
-    File "subfinder/subfinder_gevent.pyc", line 2, in <module>
-    File "gevent/__init__.pyc", line 87, in <module>
-    File "gevent/_hub_local.pyc", line 101, in <module>
-    File "gevent/_util.pyc", line 105, in import_c_accel
-    File "importlib/__init__.pyc", line 126, in import_module
-    ModuleNotFoundError: No module named 'gevent.__hub_local'
-    ```
-
-    出错位置是 `gevent/_util.py` 的 105 行，`gevent.__hub_local` 这个模块是一个 C 扩展。
-
-    在 `gevent/_util.py` 中有一个函数负责动态导入模块
-
-    ```
-    def import_c_accel(globs, cname):
-        """
-        Import the C-accelerator for the __name__
-        and copy its globals.
-        """
-
-        name = globs.get('__name__')
-
-        if not name or name == cname:
-            # Do nothing if we're being exec'd as a file (no name)
-            # or we're running from the C extension
-            return
-
-        from gevent._compat import PURE_PYTHON
-        if PURE_PYTHON:
-            return
-
-        import importlib
-        import warnings
-        with warnings.catch_warnings():
-            # Python 3.7 likes to produce
-            # "ImportWarning: can't resolve
-            #   package from __spec__ or __package__, falling back on
-            #   __name__ and __path__"
-            # when we load cython compiled files. This is probably a bug in
-            # Cython, but it doesn't seem to have any consequences, it's
-            # just annoying to see and can mess up our unittests.
-            warnings.simplefilter('ignore', ImportWarning)
-            mod = importlib.import_module(cname)
-        # By adopting the entire __dict__, we get a more accurate
-        # __file__ and module repr, plus we don't leak any imported
-        # things we no longer need.
-        globs.clear()
-        globs.update(mod.__dict__)
-
-        if 'import_c_accel' in globs:
-            del globs['import_c_accel']
-
-    ```
-
-    根据网上找到的一些解决方案，出错原因可能是使用 importlib 动态导入 C 模块的原因。
-
-    附上网上的解决方案：
-
-    ```
-    # 在代码最开始出执行 fix_import()
-    def fix_import():
-        import imp, importlib, sys
-        import gevent.__hub_local
-        
-        original_load_module = imp.load_module
-        original_find_module = imp.find_module
-
-        def custom_load_module(name, file, pathname, description):
-            if name == 'gevent.__hub_local:
-                return sys.modules[name]
-            return original_load_module(name, file, pathname, description)
-
-        def custom_find_module(name, path=None):
-            if name == 'gevent.__hub_local:
-                return (None, None, None)
-            return original_find_module(name, path)
-
-        imp.load_module = custom_load_module
-        imp.find_module = custom_find_module
-    ```
-
-    最终仍然没有解决这个问题，无奈只好用 thread 替换 gevent。
-
-    **参考**
-
-    - [py2app兼容性(Common causes for incompatibility)](http://py2app.readthedocs.io/en/latest/recipes.html)
-
-2. 找不到 CA 证书的问题
-
-    当使用 thread 替换 gevent 后，问题1解决了。可是再次运行打包好的 SubFinder.app 时，出现“找不到 CA 证书”的错误。
-
-    SubFinder 使用到了 `requests`，`requests` 依赖 `certifi` 提供 CA 证书。似乎 py2app 无法很好地处理这种非代码的依赖资源。
-
-    解决方案：
-
-    1. 将 `certifi` 库目录的`cacert.pem` 文件复制到 SubFinder 的 app/assets 目录下
+1. 创建 SubFinder.win.spec
     
-    2. 在 setup.py 中添加`cacert.pem`
-        
-        ```
-        ...
-        cert_file = 'assets/cacert.pem'
-        setup(
-            name="SubFinder",
-            setup_requires=['py2app'],
-            app=['app.py'],
-            options={
-                "py2app": {
-                    "resources": ','.join([cert_file, ])
-                }
-            }
-        )
-        ```
-    
-    3. 在代码最开始处添加下面的代码
+    `make_spec.bat`
 
-        ```
-        import os
-        os.environ["REQUESTS_CA_BUNDLE"] = "assets/cacert.pem"
-        ```
-    
-    [py2app options](http://py2app.readthedocs.io/en/latest/options.html)
+    make_spec.bat 会在当前目录创建 SubFinder.win.spec 文件。
 
-3. 在 Windows 上使用 py2exe 打包失败，py2exe 的版本是 0.9.2.2，python 版本是 3.6.4。
+2. 创建 app
 
-    决定试一试 pyinstaller
+    `build.bat`
 
+    创建好的 SubFinder.exe 放在 dist 目录下。
+
+**SubFinder.win.spec 是已经修改好的文件，所以可以跳过第1步**
