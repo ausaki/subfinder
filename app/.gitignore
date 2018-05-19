@@ -2,3 +2,4 @@ dist/
 build/
 .eggs/
 *.py[co]
+*.spec

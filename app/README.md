@@ -2,7 +2,7 @@
 
 这是一个使用 Tkinter 对 SubFinder 进行了一层封装的 app，可以通过 py2app 或者 py2exe 打包成独立的 app。
 
-# 用法
+# py2app 用法
 
 `python app.py`
 
@@ -18,6 +18,8 @@
 
 ## Windows
 
+**注意：我在 windows 上一直打包失败**
+
 - `pip install py2exe`
 
 - `python setup.py py2exe`
@@ -28,7 +30,7 @@
 
 # 问题
 
-在使用 py2app 打包过程中遇到两个主要问题：
+在使用 py2app 打包过程中遇到的问题：
 
 1. gevent 兼容性问题
 
@@ -158,4 +160,8 @@
         ```
     
     [py2app options](http://py2app.readthedocs.io/en/latest/options.html)
+
+3. 在 Windows 上使用 py2exe 打包失败，py2exe 的版本是 0.9.2.2，python 版本是 3.6.4。
+
+    决定试一试 pyinstaller
 
