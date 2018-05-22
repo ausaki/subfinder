@@ -16,13 +16,11 @@ SubFinder 是一个字幕查找器，可以自动查找字幕并下载。
 - 自动将字幕文件重命名为视频文件名，方便播放器自动加载字幕
 
 
-## 安装方法
+## 安装
 
-**注意：此安装方法仅适用于具有 Python 环境的系统**
+**依赖：**
 
-**依赖**
-
-- python3
+- python2 或者 python3
 
 - pip(可选)
 
@@ -46,15 +44,11 @@ SubFinder 是一个字幕查找器，可以自动查找字幕并下载。
 
 `pip install subfinder`
 
-
-## 使用方法
-
-**注意：此使用方法仅适用于具有 Python 环境的系统**
-
 安装完成之后，会在 Python 的 scripts 目录下添加一个叫做 subfinder 的可执行文件。
 
-在 unix-like 系统中，scripts 目录一般是 `/usr/local/bin`，在 Windows 系统中，scripts 目录一般是 `C:\python\scripts\`。在 Windows 系统中需要将`C:\python\scripts\` 加入到 `PATH` 中（一般安装 Python 时已经添加了）。
+> 在 unix-like 系统中，scripts 目录一般是 `/usr/local/bin`，在 Windows 系统中，scripts 目录一般是 `C:\python\scripts\`。在 Windows 系统中需要将`C:\python\scripts\` 加入到 `PATH` 中（一般安装 Python 时已经添加了）。
 
+## 使用方法
 
 ### 命令行
 
@@ -91,6 +85,7 @@ optional arguments:
   -s, --silence         don't print anything, default to False
 
 ```
+
 ### Windows 右键菜单
 
 通过注册表的方式添加右键菜单，使用时选中视频文件或者文件夹，然后点击右键选择查找字幕。
@@ -103,7 +98,7 @@ optional arguments:
 
 在 MacOS 中，通过 Automator 的 Service 实现类似于 Windows 中的右键菜单功能。
 
-- [下载workeflow](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.workflow.tar.gz)。
+- [下载workflow](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.workflow.tar.gz)。
 
 - 解压 subfinder.workflow.tar.gz。
 
@@ -112,7 +107,7 @@ optional arguments:
 - 选中视频文件或目录，右键弹出菜单，选择“服务（Services）” -> “查找字幕”。
 
 如果想要了解如何配置 workerflow，可以参考:
-- [MacOs Automator 帮助](https://support.apple.com/zh-cn/guide/automator/welcome/mac)
+- [MacOS Automator 帮助](https://support.apple.com/zh-cn/guide/automator/welcome/mac)
 - [stackexchange 的这篇回答](https://apple.stackexchange.com/questions/238948/osx-how-to-add-a-right-click-option-in-folder-to-open-the-folder-with-an-applic?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
 
 ## 图形界面
@@ -177,7 +172,7 @@ class MySubSearch(BaseSubSearch):
 
 
 # 使用 MySubSearcher 搜索字幕
-python -m subfinder.run /path/to/videofile -m MySubSearcher
+python -m subfinder.run_gevent /path/to/videofile -m MySubSearcher
 
 ```
 
