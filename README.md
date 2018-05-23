@@ -110,6 +110,7 @@ optional arguments:
 - [MacOS Automator 帮助](https://support.apple.com/zh-cn/guide/automator/welcome/mac)
 - [stackexchange 的这篇回答](https://apple.stackexchange.com/questions/238948/osx-how-to-add-a-right-click-option-in-folder-to-open-the-folder-with-an-applic?utm_medium=organic&utm_source=google_rich_qa&utm_campaign=google_rich_qa)
 
+
 ## 图形界面
 
 为了方便 Windows 和 MacOS 用户，使用 Python 自带的 Tkinter 写了一个简单的app。
@@ -132,49 +133,52 @@ optional arguments:
 
 SubFinder 是一个通用的字幕查找器，它包含两个主要的类：
 
-- `SubFinder` 
-    - 收集指定目录下所有的视频文件
-    - 调用`SubSearcher`查找字幕，
-    - 下载字幕
+**SubFinder**
 
-- `SubSearcher` 负责查找字幕
-    - 类属性：
-        - SUPPORT_LANGUAGES 支持的字幕语言， 如chn、eng
-        - SUPPORT_EXTS 支持的字幕格式，如ass、srt
-    - 方法：
-        - search_subs(self, videofile, languages, exts, *args, **kwargs) 查找字幕
-        
-            该方法接受videofile，languages，exts 参数，返回字幕信息列表
+`SubFinder` 类定义在 `subfiner/subfiner.py` 中。
 
-            字幕信息的格式: {'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT}
+`SubFinder` 负责的功能有：
 
-            注意：SUBNAME指的是字幕文件名（即保存路径），最好是绝对路径
+- 收集指定目录下所有的视频文件
 
-为了实现你自己的字幕搜索器，只需要在 subsearcher.py 中创建一个继承自`BaseSubSearcher`的类，实现`search_subs`方法，重写SUPPORT_LANGUAGES和SUPPORT_EXTS，然后在命令行参数中指定`-m`为该类的名称
+- 调用`SubSearcher`查找字幕，
 
-### 示例
-```
-# subsearcher.py
+- 下载字幕
 
-class MySubSearch(BaseSubSearch):
+你基本上不用修改 `SubFinder` 类，只需要自定义 `SubSearcher`即可。
 
-    SUPPORT_LANGUAGES = ['chinese', 'english']
-    SUPPORT_EXTS = ['ass', 'srt', 'sub']
+更多关于 `SubFinder` 的细节请查看源码。
 
-    def search_subs(self, videofile, languages, exts, *args, **kwargs):
-        # search subs for videofile
-        return [
-            {'link': LINK, 'language': LANGUAGE, 'ext': EXT},
-            {'link': LINK, 'language': LANGUAGE, 'ext': EXT}
-            ...
-            {'link': LINK, 'language': LANGUAGE, 'ext': EXT}
-        ]
+**SubSearcher**
+
+`SubSearcher` 类定义在 `subfinder/subsearcher.py中`，`SubSearcher` 负责查找字幕。
+
+类属性：
+
+- SUPPORT_LANGUAGES 支持的字幕语言， 如chn、eng
+
+- SUPPORT_EXTS 支持的字幕格式，如ass、srt
+
+方法：
+
+- search_subs(self, videofile, languages, exts, *args, **kwargs) 查找字幕
+
+    该方法接受videofile，languages，exts 参数，返回字幕信息列表
+
+    字幕信息的格式: {'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT}
+
+    注意：SUBNAME指的是字幕文件名（即保存路径），最好是绝对路径
 
 
-# 使用 MySubSearcher 搜索字幕
-python -m subfinder.run_gevent /path/to/videofile -m MySubSearcher
+为了实现你自己的字幕搜索器，你需要：
 
-```
+- 创建一个继承自 `BaseSubSearcher` 的类，实现 `search_subs` 方法，重写 SUPPORT_LANGUAGES 和 SUPPORT_EXTS 属性。
+
+- 注册你自己的 `SubSeacher` 类
+
+
+这里有一个自定义字幕搜索器的[示例文件](examples/custom_subsearcher.py)
+
 
 ## 参考
 

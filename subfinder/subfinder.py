@@ -8,7 +8,7 @@ import json
 import sqlite3
 import requests
 from . import exceptions
-from .subsearcher import ShooterSubSearcher
+from .subsearcher import get_subsearcher
 
 class Pool(object):
     def __init__(self, size):
@@ -33,7 +33,7 @@ class SubFinder(object):
         self.exts = exts
 
         if subsearcher_class is None:
-            subsearcher_class = ShooterSubSearcher
+            subsearcher_class = get_subsearcher('default')
         self.subsearcher = subsearcher_class()
 
         # silence: dont print anything

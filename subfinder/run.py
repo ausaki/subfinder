@@ -1,14 +1,12 @@
 # -*- coding: utf8 -*-
 import argparse
-from .subsearcher import *
+from .subsearcher import get_subsearcher
 from .subfinder import SubFinder
 import time
 
 
 def find_method(m):
-    g = globals()
-    method = g.get(m)
-    return method
+    return get_subsearcher(m)
 
 
 def run(subfinder_class):
@@ -22,7 +20,7 @@ def run(subfinder_class):
                         nargs='+',
                         help="what's format of subtitle you want to find")
     parser.add_argument('-m', '--method',
-                        type=find_method, default=ShooterSubSearcher,
+                        type=find_method,
                         help='''what's method you want to use to searching subtitles, defaults to ShooterSubSearcher.
                         only support ShooterSubSearcher for now.
                         ''')
@@ -34,8 +32,9 @@ def run(subfinder_class):
                         help="pause script after subfinder done. this option is used in 'Context Menu on Windows' only")
 
     args = parser.parse_args()
+
     if args.method is None:
-        args.method = ShooterSubSearcher
+        args.method = get_subsearcher('default')
 
     if args.languages:
         args.method._check_languages(args.languages)

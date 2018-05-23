@@ -5,6 +5,34 @@ from abc import abstractmethod, ABCMeta
 import requests
 from . import exceptions
 
+
+registered_subsearchers = {}
+
+
+def register_subsearcher(name, subsearcher_cls):
+    """ register a subsearcher, the `name` is a key used for searching subsearchers.
+    if the subsearcher named `name` already exists, then it's will overrite the old subsearcher.
+    """
+    if not issubclass(subsearcher_cls, BaseSubSearcher):
+        raise ValueError('{} is not a subclass of BaseSubSearcher'.format(subsearcher_cls))
+    registered_subsearchers[name] = subsearcher_cls
+
+
+def get_subsearcher(name, default=None):
+    return registered_subsearchers.get(name, default)
+
+
+def register(subsearcher_cls=None, name=None):
+    def decorator(subsearcher_cls):
+        if name is None:
+            _name = subsearcher_cls.__name__
+        else:
+            _name = name
+        register_subsearcher(_name, subsearcher_cls)
+        return subsearcher_cls
+    return decorator(subsearcher_cls) if subsearcher_cls is not None else decorator
+
+
 class BaseSubSearcher(object):
     """ The abstract class for search subtitles.
 
@@ -61,7 +89,8 @@ class BaseSubSearcher(object):
                 raise exceptions.ExtError(
                     '{} don\'t support {} ext'.format(cls.__name__, ext))
 
-
+@register
+@register(name='default')
 class ShooterSubSearcher(BaseSubSearcher):
     """ find subtitles from shooter.org
     API URL: https://www.shooter.cn/api/subapi.php
