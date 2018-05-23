@@ -136,9 +136,9 @@ optional arguments:
 
 ## 扩展
 
-### subfinder 架构
-
 subfinder 的定位是支持第三方扩展的通用字幕查找器。
+
+### subfinder 架构
 
 **SubFinder**
 
@@ -188,6 +188,7 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
     注意：`subname` 指的是字幕文件名（即保存路径），最好是绝对路径。
 
+### 自定义字幕搜索器
 
 为了实现你自己的字幕搜索器，你需要：
 
