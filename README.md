@@ -140,7 +140,7 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 ### subfinder 架构
 
-**SubFinder**
+**class subfinder.subfinder.SubFinder**
 
 `SubFinder` 类定义在 `subfiner/subfiner.py` 中。
 
@@ -152,13 +152,36 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 - 下载字幕。
 
+方法：
+
+- `__init__(self, path='./', languages=None, exts=None, subsearcher_class=None, **kwargs)`
+    
+    |参数|介绍|类型|
+    |-|-|-|
+    |path|文件名或者目录|str|
+    |languages|字幕语言|str or [str]|
+    |exts|字幕格式|str or [str]|
+    |subsearcher_class|字幕搜索器| subclass of BaseSubSearcher|
+    
+- `start()`
+
+    开始查找字幕
+
+- `done()`
+
+    查找字幕完成后调用，进行一些收尾工作。
+
+你基本上不用修改 `SubFinder` 类，只需要自定义 `SubSearcher` 即可。
+
+更多关于 `SubFinder` 的细节请查看源码。
+
 `SubFinder` 默认是单线程的，效率有点低，因此基于 `SubFinder` 实现了两个分别基于 gevent 和 thread 的子类。
 
-**SubFinderThread**
+**class subfinder.subfinder_thread.SubFinderThread**
 
 `SubFinderThread` 类定义在 `subfiner/subfiner_thread.py` 中，`SubFinderThread` 重写了 `SubFinder` 的 `_init_pool` 方法，使用线程池去查找字幕和下载字幕。
 
-**SubFinderGevent**
+**class subfinder.subfinder_gevent.SubFinderGevent**
 
 `SubFinderGevent` 类定义在 `subfiner/subfiner_gevent.py` 中，`SubFinderGevent` 重写了 `SubFinder` 的 `_init_pool` 方法，使用协程池去查找字幕和下载字幕。
 
@@ -166,36 +189,38 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
     
     `from gevent import monkey;monkey.patch_all()`
 
-你基本上不用修改 `SubFinder` 类，只需要自定义 `SubSearcher` 即可。
 
-更多关于 `SubFinder` 的细节请查看源码。
-
-**SubSearcher**
+**class subfinder.subsearcher.SubSearcher**
 
 `SubSearcher` 类定义在 `subfinder/subsearcher.py中`，`SubSearcher` 负责查找字幕。
 
 类属性：
 
-- SUPPORT_LANGUAGES 支持的字幕语言， 如chn、eng。`SUPPORT_LANGUAGES` 用于检查命令行的 `languages` 参数是否合法。
+- `SUPPORT_LANGUAGES`， 支持的字幕语言， 如chn、eng。`SUPPORT_LANGUAGES` 用于检查命令行的 `languages` 参数是否合法。
 
-- SUPPORT_EXTS 支持的字幕格式，如ass、srt。`SUPPORT_EXTS` 用于检查命令行的 `exts` 参数是否合法。
+- `SUPPORT_EXTS`， 支持的字幕格式，如ass、srt。`SUPPORT_EXTS` 用于检查命令行的 `exts` 参数是否合法。
 
 方法：
 
-- search_subs(self, videofile, languages, exts, *args, **kwargs) 查找字幕。
+- `search_subs(self, videofile, languages, exts, *args, **kwargs)`， 查找字幕。
 
-    该方法接受videofile，languages，exts 参数，返回字幕信息列表，字幕信息的格式: {'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT}。
+    |参数|介绍|类型|
+    |-|-|-|
+    |videofile|视频文件名的绝对路径|str|
+    |languages|字幕语言| str or [str]|
+    |exts|字幕格式|str or [str] |
 
-    注意：`subname` 指的是字幕文件名（即保存路径），最好是绝对路径。
+    返回字幕信息列表，字幕信息的格式: `{'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT}`。
+
+    注意：`subname` 指的是字幕文件名（即保存路径），最好是绝对路径，`SubFinder` 会将下载的字幕保存至 `subname` 中。
 
 ### 自定义字幕搜索器
 
 为了实现你自己的字幕搜索器，你需要：
 
-- 创建一个继承自 `BaseSubSearcher` 的类，实现 `search_subs` 方法，重写 SUPPORT_LANGUAGES 和 SUPPORT_EXTS 属性。
+- 创建一个继承自 `BaseSubSearcher` 的类，实现 `search_subs` 方法，重写 `SUPPORT_LANGUAGES` 和 `SUPPORT_EXTS` 属性。
 
 - 注册你自己的 `SubSeacher` 类。
-
 
 这里有一个自定义字幕搜索器的[示例文件](examples/custom_subsearcher.py)。
 
