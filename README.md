@@ -159,9 +159,9 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
     |参数|介绍|类型|
     |-|-|-|
     |path|文件名或者目录|str|
-    |languages|字幕语言|str or [str]|
-    |exts|字幕格式|str or [str]|
-    |subsearcher_class|字幕搜索器| subclass of BaseSubSearcher|
+    |languages|字幕语言， 如果为 None，则由 `subsearcher_class` 自己决定|str or [str]|
+    |exts|字幕格式，如果为 None，则由 `subsearcher_class` 自己决定|str or [str]|
+    |subsearcher_class|字幕搜索器，默认是 `ShooterSubSearcher`| subclass of BaseSubSearcher|
     
 - `start()`
 
@@ -202,7 +202,7 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 方法：
 
-- `search_subs(self, videofile, languages, exts, *args, **kwargs)`， 查找字幕。
+- `search_subs(self, videofile, languages=None, exts=None, **kwargs)`， 查找字幕。
 
     |参数|介绍|类型|
     |-|-|-|

@@ -35,7 +35,6 @@ setup(name='SubFinder',
       author=author,
       url='https://github.com/ausaki/subfinder/',
       packages=['subfinder'],
-      scripts=['scripts/subfinder'],
       entry_points={
             'console_scripts': [
                   'subfinder = subfinder.run_gevent:run',
