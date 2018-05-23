@@ -215,4 +215,4 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 ## License
 
-[MIT License](https://opensource.org/licenses/MIT)
+[MIT License](LICENSE)
