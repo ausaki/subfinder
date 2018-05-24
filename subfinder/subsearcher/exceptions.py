@@ -1,11 +1,18 @@
 class InvalidFileError(Exception):
     pass
 
+
 class LanguageError(Exception):
     pass
+
 
 class ExtError(Exception):
     pass
 
-class SearchingSubinfoError(Exception):
+
+class ShooterAPIError(Exception):
+    pass
+
+
+class ZimukuSearchingError(Exception):
     pass

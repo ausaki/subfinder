@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+from __future__ import unicode_literals
 import argparse
 from .subsearcher import get_subsearcher
 from .subfinder import SubFinder
@@ -6,7 +7,10 @@ import time
 
 
 def find_method(m):
-    return get_subsearcher(m)
+    s = get_subsearcher(m)
+    if s is None:
+        raise argparse.ArgumentTypeError('Cant found SubSearcher named {}'.format(m))
+    return s
 
 
 def run(subfinder_class):
@@ -40,7 +44,7 @@ def run(subfinder_class):
         args.method._check_languages(args.languages)
     if args.exts:
         args.method._check_exts(args.exts)
-
+    
     subfinder = subfinder_class(path=args.path,
                           languages=args.languages,
                           exts=args.exts,

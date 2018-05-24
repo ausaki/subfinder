@@ -1,101 +1,15 @@
-# -*- coding: utf8 -*-
+from __future__ import unicode_literals
 import os
 import hashlib
-from abc import abstractmethod, ABCMeta
 import requests
+from .subsearcher import BaseSubSearcher
 from . import exceptions
 
-
-registered_subsearchers = {}
-
-
-def register_subsearcher(name, subsearcher_cls):
-    """ register a subsearcher, the `name` is a key used for searching subsearchers.
-    if the subsearcher named `name` already exists, then it's will overrite the old subsearcher.
-    """
-    if not issubclass(subsearcher_cls, BaseSubSearcher):
-        raise ValueError('{} is not a subclass of BaseSubSearcher'.format(subsearcher_cls))
-    registered_subsearchers[name] = subsearcher_cls
-
-
-def get_subsearcher(name, default=None):
-    return registered_subsearchers.get(name, default)
-
-
-def register(subsearcher_cls=None, name=None):
-    def decorator(subsearcher_cls):
-        if name is None:
-            _name = subsearcher_cls.__name__
-        else:
-            _name = name
-        register_subsearcher(_name, subsearcher_cls)
-        return subsearcher_cls
-    return decorator(subsearcher_cls) if subsearcher_cls is not None else decorator
-
-
-class BaseSubSearcher(object):
-    """ The abstract class for search subtitles.
-
-    You must implement following methods:
-    - search_subs
-    """
-    __metaclass__ = ABCMeta
-
-    SUPPORT_LANGUAGES = []
-    SUPPORT_EXTS = []
-
-    @abstractmethod
-    def search_subs(self, videofile, languages, exts, *args, **kwargs):
-        """ search subtitles of videofile.
-
-        `videofile` is the absolute(or relative) path of the video file.
-
-        `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
-        implemention of subclass. `languages` accepts one language or a list of language
-
-        `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
-        depende on implemention of subclass. `ext` accepts one ext or a list of ext
-
-        return a list of subtitle info
-        [
-            {
-                'link': '',     # download link
-                'language': '', # language
-                'format': '',   # format
-                'subname': '',  # the filename of subtitles
-            },
-            {
-                'link': '',
-                'language': '',
-                'format': '',
-                'subname': '',
-            },
-            ...
-        ] 
-        """
-        pass
-
-    @classmethod
-    def _check_languages(cls, languages):
-        for lang in languages:
-            if lang not in cls.SUPPORT_LANGUAGES:
-                raise exceptions.LanguageError(
-                    '{} don\'t support {} language'.format(cls.__name__, lang))
-
-    @classmethod
-    def _check_exts(cls, exts):
-        for ext in exts:
-            if ext not in cls.SUPPORT_EXTS:
-                raise exceptions.ExtError(
-                    '{} don\'t support {} ext'.format(cls.__name__, ext))
-
-@register
-@register(name='default')
 class ShooterSubSearcher(BaseSubSearcher):
     """ find subtitles from shooter.org
     API URL: https://www.shooter.cn/api/subapi.php
     """
-
+    __shortname__ = 'shooter'
     API_URL = 'https://www.shooter.cn/api/subapi.php'
     SUPPORT_LANGUAGES = ['Chn', 'Eng']
     SUPPORT_EXTS = ['ass', 'srt']
@@ -138,7 +52,7 @@ class ShooterSubSearcher(BaseSubSearcher):
                 res = self.session.post(self.API_URL, data=payload)
                 result[language] = res.json()
             except Exception as e:
-                raise exceptions.SearchingSubinfoError(str(e))
+                raise exceptions.ShooterAPIError(str(e))
 
         subinfos = []
         for language, subinfolist in result.items():
@@ -156,7 +70,8 @@ class ShooterSubSearcher(BaseSubSearcher):
                             'link': link,
                             'language': language,
                             'subname': self._gen_subname(videofile, language, ext_),
-                            'ext': ext_
+                            'ext': ext_,
+                            'downloaded': False
                         })
                         ext_set.add(ext_)
         return subinfos
@@ -172,8 +87,7 @@ class ShooterSubSearcher(BaseSubSearcher):
             basename=name,
             language=language,
             ext=ext)
-        p = os.path.join(root, subname)
-        return p
+        return subname
 
     @staticmethod
     def _compute_video_hash(videofile):

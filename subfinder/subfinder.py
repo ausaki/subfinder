@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+from __future__ import unicode_literals
 import os
 import sys
 import logging
@@ -7,8 +8,8 @@ import time
 import json
 import sqlite3
 import requests
-from . import exceptions
-from .subsearcher import get_subsearcher
+from .subsearcher import get_subsearcher, exceptions
+
 
 class Pool(object):
     def __init__(self, size):
@@ -47,6 +48,7 @@ class SubFinder(object):
 
         # _history: recoding downloading history
         self._history = {}
+
 
     def _is_videofile(self, f):
         """ determine `f` is a valid video file
@@ -108,74 +110,35 @@ class SubFinder(object):
         self._devnull.close()
         sys.stderr = self._old_stderr
 
-    def _save_history(self):
-        """ save downloading history to .subfinder_history.db(sqlite3)
-        """
-        root = ''
-        if os.path.isfile(self.path):
-            root = os.path.dirname(self.path)
-        else:
-            root = self.path
-        dbname = os.path.join(root, '.subfinder_history.db')
-        if sys.version_info.major == 2 and isinstance(dbname, str):
-            try:
-                dbname = dbname.decode(sys.getfilesystemencoding()) 
-            except UnicodeDecodeError as e:
-                self.logger.warn('Please cheking "path" argument. if "path" contains chinese characters, please replace these characters with alphabets and try run again')
-                return
-        conn = sqlite3.connect(dbname)
-        cursor = conn.cursor()
-        # create table
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS history(
-                id INTEGER PRIMARY KEY AUTOINCREMENT, 
-                create_at INTEGER,
-                content TEXT)
-        ''')
-        if sys.version_info.major == 2:
-            content = json.dumps(self._history, encoding=sys.getfilesystemencoding())
-        else:
-            content = json.dumps(self._history)
-        cursor.execute('INSERT INTO history(create_at, content) VALUES(?, ?)',
-                       (int(time.time()), content))
-        conn.commit()
-        cursor.close()
-        conn.close()
-
     def _download(self, videofile):
         basename = os.path.basename(videofile)
         self.logger.info('Start search subtitles of {}'.format(basename))
         try:
             subinfos = self.subsearcher.search_subs(
                 videofile, self.languages, self.exts)
-        except exceptions.SearchingSubinfoError as e:
+        except Exception as e:
             self.logger.error(
                 'search subinfo of {} happening error: {}'.format(basename, str(e)))
-            return
-        except exceptions.InvalidFileError as e:
-            self.logger.error(str(e))
-            return
-        except Exception as e:
-            self.logger.error(e)
             return
 
         self.logger.info('Find {} subtitles for {}, prepare to download'.format(
             len(subinfos), basename))
         try:
             for subinfo in subinfos:
-                link = subinfo['link']
-                language = subinfo['language']
-                ext = subinfo['ext']
-                subname = subinfo.get('subname')
-                res = self.session.get(link, stream=True)
-                with open(subname, 'wb') as fp:
-                    for chunk in res.iter_content(8192):
-                        fp.write(chunk)
-                self._history[videofile].append(subname)
-
-            self.logger.info('Downloaded {} subtitles for {}'.format(
-                len(subinfos),
-                basename))
+                downloaded = subinfo.get('downloaded', False)
+                if downloaded:
+                    if isinstance(subinfo['subname'], (list, tuple)):
+                        self._history[videofile].extend(subinfo['subname'])
+                    else:
+                        self._history[videofile].append(subinfo['subname'])
+                else:
+                    subname = subinfo.get('subname')
+                    subpath = os.path.join(os.path.dirname(videofile), subname)
+                    res = self.session.get(link, stream=True)
+                    with open(subpath, 'wb') as fp:
+                        for chunk in res.iter_content(8192):
+                            fp.write(chunk)
+                    self._history[videofile].append(subpath)
         except Exception as e:
             self.logger.error(str(e))
 
@@ -198,11 +161,10 @@ class SubFinder(object):
             self._history[f] = []
             self.pool.spawn(self._download, f)
         self.pool.join()
-        self._save_history()
-        self.logger.info('Done! enjoying the movies!')
+        self.logger.info('='*20 + 'Done! enjoying the movies!' + '='*20)
+        for v, subs in self._history.items():
+            basename = os.path.basename(v)
+            self.logger.info('{}: find {} subtitles'.format(basename, len(subs)))
 
     def done(self):
         self.recovery_stderr()
-
-    def remove_subtitles(self):
-        pass

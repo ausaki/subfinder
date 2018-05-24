@@ -1,0 +1,386 @@
+# -*- coding: utf8 -*-
+
+from __future__ import unicode_literals
+import os
+import re
+import json
+try:
+    import urlparse
+except ImportError as e:
+    from urllib import parse as urlparse
+import requests
+import bs4
+from .subsearcher import BaseSubSearcher
+from . import exceptions
+
+class ArchiveFile(object):
+    """ a simple wrapper class for ZipFile and RarFile, it's only support read.
+    """
+    EXTS = ['zip', 'rar']
+
+    def __init__(self, file):
+        self.file = file
+        self._file = None
+        _, ext = os.path.splitext(file)
+        if ext == '.zip':
+            import zipfile
+            self._file = zipfile.ZipFile(self.file, 'r')
+        else:
+            import rarfile
+            self._file = rarfile.RarFile(self.file, 'r')
+    @classmethod
+    def is_archivefile(cls, filename):
+        _, ext = os.path.splitext(filename)
+        ext = ext[1:]
+        return ext in cls.EXTS
+        
+    def isdir(self, name):
+        info = self._file.getinfo(name)
+        try:
+            return info.isdir()
+        except:
+            return name.endswith(os.path.sep)
+
+    def namelist(self):
+        return self._file.namelist()
+
+    def extract(self, filename, dest):
+        f = self._file.open(filename, 'r') 
+        with open(dest, 'wb') as fp:
+            fp.write(f.read())
+
+    def close(self):
+        self._file.close()
+
+
+class ZimukuSubSearcher(BaseSubSearcher):
+    """ a SubSearcher searching subtitles by zimuku(https://www.zimuku.cn/)
+    """
+    SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
+    SUPPORT_EXTS = ['ass', 'srt']
+    LANGUAGES_MAP = {
+        '简体中文字幕': 'zh_chs',
+        '繁體中文字幕': 'zh_cht',
+        'English字幕': 'en',
+        '双语字幕': 'zh_en'
+    }
+    COMMON_LANGUAGES = ['英文', '简体', '繁体', '简体&英文', '繁体&英文',]
+
+    API = 'https://www.zimuku.cn/search'
+    SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
+
+    _cache = {}
+
+    def __init__(self, *args, **kwargs):
+        super(ZimukuSubSearcher, self).__init__(*args, **kwargs)
+        self.session = requests.session()
+        self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        self.visited_url = []
+
+    def _join_url(self, url, path):
+        """ join absolute `url` and `path`(href)
+        """
+        return urlparse.urljoin(url, path)
+
+    def _parse_videofile(self, videofile):
+        """ parse the `videofile` and return it's basename
+        """
+        name = os.path.basename(videofile)
+        name = os.path.splitext(name)[0]
+        return name
+
+    def _parse_videoname(self, videoname):
+        """ parse videoname and return video info dict
+        video info contains:
+        - basename
+        - season, defaults to 0
+        - episode, defaults to 0
+        """
+        info = {
+            'basename': videoname,
+            'season': 0,
+            'episode': 0
+        }
+        # this pat try to find season and episode
+        pat = r'^(?P<basename>.*)\.[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)\..*$'
+        m = re.match(pat, videoname)
+        if m is None:
+            return info
+        else:
+            info['season'] = int(m.group('season'))
+            info['episode'] = int(m.group('episode'))
+            return info
+    
+    def _parse_search_results_html(self, doc):
+        """ parse search result html, return subgroups
+        subgroups: [{ 'title': title, 'link': link}]
+        """
+        subgroups = []
+        soup = bs4.BeautifulSoup(doc, 'lxml')
+        ele_divs = soup.select('div.item.prel')
+        if not ele_divs:
+            return subgroups
+        for item in ele_divs:
+            ele_a = item.select('p.tt > a')
+            if not ele_a:
+                continue
+            link = ele_a[0].get('href')
+            title = ele_a[0].get_text().strip()
+            subgroups.append({
+                'title': title,
+                'link': link,
+            })
+        return subgroups
+
+    def _parse_sublist_html(self, doc):
+        soup = bs4.BeautifulSoup(doc, 'lxml')
+        subinfo_list = []
+        ele_tr_list = soup.select('div.subs > table tr.odd, div.subs > table tr.even')
+        if not ele_tr_list:
+            return subinfo_list 
+        for tr in ele_tr_list:
+            subinfo = {
+                'title': '',
+                'link': '',
+                'author': '',
+                'exts': [],
+                'languages': [],
+                'rate': 0,
+                'download_count': 0,
+            }
+            ele_td = tr.find('td', class_='first')
+            if ele_td:
+                # 字幕标题
+                subinfo['title'] = ele_td.a.get('title').strip()
+                # 链接
+                subinfo['link'] = ele_td.a.get('href').strip()
+                # 格式
+                ele_span_list = ele_td.select('span.label.label-info')
+                for ele_span in ele_span_list:
+                    ext = ele_span.get_text().strip()
+                    ext = ext.lower()
+                    ext = ext.split('/')
+                    subinfo['exts'].extend(ext)
+                # 作者
+                ele_span = ele_td.select('span > a > span.label.label-danger')
+                if ele_span:
+                    subinfo['author'] = ele_span[0].get_text().strip()
+            # 语言
+            ele_imgs = tr.select('td.tac.lang > img')
+            if ele_imgs:
+                for ele_img in ele_imgs:
+                    language = ele_img.get('title', ele_img.get('alt'))
+                    language = self.LANGUAGES_MAP.get(language)
+                    subinfo['languages'].append(language)
+            # 评分
+            ele_i = tr.select('td.tac i.rating-star')
+            if ele_i:
+                ele_i = ele_i[0]
+                m = re.search(r'(\d+)', ele_i.get('title'))
+                if m:
+                    subinfo['rate'] = m.group(1)
+            # 下载次数
+            ele_td = tr.select('td.tac')
+            if ele_td:
+                ele_td = ele_td[-1]
+                subinfo['download_count'] = int(ele_td.get_text().strip())
+            subinfo_list.append(subinfo)
+        return subinfo_list
+    
+    def _filter_subgroup(self, videoname, subgroups):
+        """ choose a best subgroup from `subgroups`
+        """
+        chosen_subgroup = None
+        max_size = 0
+        for title, subgroup in subgroups:
+            s = len(subgroup['subinfo_list'])
+            if s > max_size:
+                choosen_subgroup = subgroup
+        return choosen_subgroup
+
+    def _filter_subinfo_list(self, subinfo_list, videoname, languages, exts):
+        """ filter subinfo list base on:
+        - season
+        - episode
+        - languages
+        - exts
+        - 
+        return a best matched subinfo
+        """
+        videoinfo = self._parse_videoname(videoname)
+        season = videoinfo.get('season')
+        episode = videoinfo.get('episode')
+
+        filtered_subinfo_list = []
+        
+        for subinfo in subinfo_list:
+            title = subinfo.get('title')
+            videoinfo_ = self._parse_videoname(title)
+            season_ = videoinfo_.get('season')
+            episode_ = videoinfo_.get('episode')
+            languages_ = subinfo.get('languages')
+            exts_ = subinfo.get('exts')
+
+            # print season, season_
+            # print episode, episode_
+            # print languages, languages_, subinfo.get('languages')
+            # print exts, exts_
+            # filter by season and episode
+            if (season == season_ and
+                episode == episode_ and
+                set(languages_).intersection(set(languages)) and
+                set(exts_).intersection(set(exts))):
+                
+                filtered_subinfo_list.append(subinfo)
+        
+        if not filtered_subinfo_list:
+            return None
+        # get top 5 similarity with videoname
+
+        # sort by download_count and rate
+        sorted_subinfo_list = sorted(filtered_subinfo_list,
+                                     key=lambda item: (item['rate'], item['download_count']),
+                                     reverse=True)
+        return sorted_subinfo_list[0]
+
+    def _get_subinfo_list(self, videoname):
+        """ return subinfo_list of videoname
+        """
+        # searching subtitles
+        res = self.session.get(self.API, params={'q': videoname})
+        doc = res.content
+        self.visited_url.append(res.url)
+        subgroups = self._parse_search_results_html(doc)
+        if not subgroups:
+            return []
+        subgroup = subgroups[0]
+        
+
+        # get subtitles
+        headers = {
+            'Referer': self.visited_url[-1]
+        }
+        res = self.session.get(self._join_url(self.API, subgroup['link']))
+        doc = res.content
+        self.visited_url.append(res.url)
+        subinfo_list = self._parse_sublist_html(doc)
+        return subinfo_list
+
+    def _get_downloadpage_link(self, subinfo):
+        detail_link = subinfo['link']
+        m = re.search(r'\d+', detail_link)
+        detail_link = self._join_url(self.API, detail_link)
+        self.visited_url.append(detail_link)
+        if not m:
+            return None
+        l = '{}.html'.format(m.group(0))
+        downloadpage_link = self._join_url(self.SUBTITLE_DOWNLOAD_LINK, l)
+        return downloadpage_link
+    
+    def _get_subtitle_download_link(self, link):
+        """ get real subinfo.
+        parse the html doc of link, get the real download link of subtitles.
+        """
+        headers = {
+            'Referer': self.visited_url[-1]
+        }
+        res = self.session.get(link, headers=headers)
+        doc = res.content
+        self.visited_url.append(res.url)
+        soup = bs4.BeautifulSoup(doc, 'lxml')
+        ele_a_list = soup.select('a.btn.btn-sm')
+        if not ele_a_list:
+            return None
+        ele_a = ele_a_list[1]
+        download_link = ele_a.get('href')
+        return download_link
+    
+    def _gen_subname(self, videofile, orig_subname, subinfo):
+        basename = os.path.basename(videofile)
+        basename, _ = os.path.splitext(basename)
+        language = []
+        for l in self.COMMON_LANGUAGES:
+            if orig_subname.find(l) >= 0:
+                language.append(l)
+        language = '.'.join(language)
+        _, ext = os.path.splitext(orig_subname)
+        return '{basename}.{language}{ext}'.format(
+            basename=basename,
+            language=language,
+            ext=ext)
+
+    def _download_subs(self, subinfo, videofile):
+        """download archived sub
+        """
+        root = os.path.dirname(videofile)
+        name, _ = os.path.splitext(os.path.basename(videofile))
+        title = subinfo['title']
+        _, ext = os.path.splitext(title)
+        name = '{}{}'.format(name, ext)
+        path = os.path.join(root, name)
+        
+        link = self._get_downloadpage_link(subinfo)
+        subtitle_download_link = self._get_subtitle_download_link(link)
+        
+        headers = {
+            'Referer': self.visited_url[-1]
+        }
+        res = self.session.get(subtitle_download_link, headers=headers, stream=True)
+        self.visited_url.append(res.url)
+        with open(path, 'wb') as fp:
+            for chunk in res.iter_content(8192):
+                fp.write(chunk)
+        if ArchiveFile.is_archivefile(path):
+            subs = []
+            af = ArchiveFile(path)
+            for name in af.namelist():
+                if not af.isdir(name):
+                    subname = self._gen_subname(videofile, name, subinfo)
+                    subpath = os.path.join(root, subname)
+                    af.extract(name, subpath)
+                    subs.append(subpath)
+            af.close()
+            return subs
+        else:
+            return [path]
+
+    def search_subs(self, videofile, languages=None, exts=None):
+        if languages is None:
+            languages = [self.SUPPORT_LANGUAGES[0]]
+        elif isinstance(languages, str):
+            languages = [languages]
+        self._check_languages(languages)
+
+        if exts is None:
+            exts = self.SUPPORT_EXTS
+        elif isinstance(exts, str):
+            exts = [exts]
+        self._check_exts(exts)
+
+        videoname = self._parse_videofile(videofile) # basename, not ext
+        
+        # try find subinfo_list from self._cache
+        videoinfo = self._parse_videoname(videoname)
+        basename = videoinfo.get('basename')
+        if basename not in self._cache:
+            subinfo_list = self._get_subinfo_list(videoname)
+            self._cache[basename] = subinfo_list
+        else:
+            subinfo_list = self._cache.get(basename)
+        
+        subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
+        if not subinfo:
+            return []
+        subs = self._download_subs(subinfo, videofile)
+        return [{
+            'link': self.visited_url[-1],
+            'language': subinfo['languages'],
+            'ext': subinfo['exts'],
+            'subname': subs,
+            'downloaded': True
+        }]
+
+if __name__ == '__main__':
+    s = ZimukuSubSearcher()
+    p = os.path.expanduser('~/Downloads/test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
+    s.search_subs(p)

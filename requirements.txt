@@ -1,3 +1,5 @@
 # Requirement
 requests
+bs4
 gevent
+rarfile

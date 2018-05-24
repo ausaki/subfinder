@@ -8,12 +8,6 @@ except ImportError:
 from subfinder import __version__, __author__
 version = __version__
 author = __author__
-# with open('subfinder/__init__.py') as fp:
-#       content = fp.read()
-#       version = re.search(r'^__version__\s*=\s*[\'"]([^\'"]*)[\'"]',
-#                               content, re.MULTILINE).group(1)
-#       author = re.search(r'^__author__\s*=\s*[\'"]([^\'"]*)[\'"]',
-#                               content, re.MULTILINE).group(1)
 
 
 if not version:
@@ -34,7 +28,7 @@ setup(name='SubFinder',
       description='SubFiner',
       author=author,
       url='https://github.com/ausaki/subfinder/',
-      packages=['subfinder'],
+      packages=['subfinder', 'subfinder.subsearcher'],
       entry_points={
             'console_scripts': [
                   'subfinder = subfinder.run_gevent:run',

@@ -1,4 +1,5 @@
 # -*- coding: utf8 -*-
+from __future__ import unicode_literals
 from .subfinder import SubFinder
 try:
     from queue import Queue

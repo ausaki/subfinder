@@ -210,9 +210,18 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
     |languages|字幕语言| str or [str]|
     |exts|字幕格式|str or [str] |
 
-    返回字幕信息列表，字幕信息的格式: `{'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT}`。
+    返回字幕信息列表，字幕信息的格式: `{'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT, 'downloaded': False}`。
 
-    注意：`subname` 指的是字幕文件名（即保存路径），最好是绝对路径，`SubFinder` 会将下载的字幕保存至 `subname` 中。
+    格式：
+    
+    |字段|介绍|类型|
+    |-|-|-|
+    |link|字幕文件下载地址，可选，取决于 `downloaded`，如果 `downloaded` 为 False，则必须提供|str|
+    |language|字幕语言| str or [str]|
+    |exts|字幕格式|str or [str] |
+    |subname|字幕文件名，可选，取决于 `downloaded`，如果 `downloaded` 为 False，则必须提供|str or [str]|
+    |downloaded|`SubSearcher` 是否已经下载好了字幕。如果为 True，表示 `SubSearcher` 已经下载了字幕，那么 `SubFinder` 将不会下载字幕，否者 `SubFinder` 会根据 `link` 下载字幕。|bool|
+
 
 ### 自定义字幕搜索器
 
