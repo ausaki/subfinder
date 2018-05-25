@@ -9,7 +9,7 @@ class ShooterSubSearcher(BaseSubSearcher):
     """ find subtitles from shooter.org
     API URL: https://www.shooter.cn/api/subapi.php
     """
-    __shortname__ = 'shooter'
+    shortname = 'shooter'
     API_URL = 'https://www.shooter.cn/api/subapi.php'
     SUPPORT_LANGUAGES = ['Chn', 'Eng']
     SUPPORT_EXTS = ['ass', 'srt']

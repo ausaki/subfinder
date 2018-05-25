@@ -16,10 +16,6 @@ def register_subsearcher(name, subsearcher_cls):
     registered_subsearchers[name] = subsearcher_cls
 
 
-def get_subsearcher(name, default=None):
-    return registered_subsearchers.get(name, default)
-
-
 def register(subsearcher_cls=None, name=None):
     def decorator(subsearcher_cls):
         if name is None:
@@ -29,6 +25,14 @@ def register(subsearcher_cls=None, name=None):
         register_subsearcher(_name, subsearcher_cls)
         return subsearcher_cls
     return decorator(subsearcher_cls) if subsearcher_cls is not None else decorator
+
+
+def get_subsearcher(name, default=None):
+    return registered_subsearchers.get(name, default)
+
+
+def get_all_subsearchers():
+    return registered_subsearchers
 
 
 class BaseSubSearcher(object):

@@ -33,7 +33,7 @@ class ArchiveFile(object):
         _, ext = os.path.splitext(filename)
         ext = ext[1:]
         return ext in cls.EXTS
-        
+
     def isdir(self, name):
         info = self._file.getinfo(name)
         try:
@@ -70,6 +70,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
     SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
 
     _cache = {}
+    shortname = 'zimuku'
 
     def __init__(self, *args, **kwargs):
         super(ZimukuSubSearcher, self).__init__(*args, **kwargs)
@@ -89,6 +90,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         name = os.path.splitext(name)[0]
         return name
 
+    re_video_name = re.compile(r'^(?P<basename>.*)\.[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)\..*$')
+    
     def _parse_videoname(self, videoname):
         """ parse videoname and return video info dict
         video info contains:
@@ -102,8 +105,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             'episode': 0
         }
         # this pat try to find season and episode
-        pat = r'^(?P<basename>.*)\.[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)\..*$'
-        m = re.match(pat, videoname)
+        m = self.re_video_name.match(videoname)
         if m is None:
             return info
         else:
@@ -187,16 +189,11 @@ class ZimukuSubSearcher(BaseSubSearcher):
             subinfo_list.append(subinfo)
         return subinfo_list
     
-    def _filter_subgroup(self, videoname, subgroups):
+    def _filter_subgroup(self, subgroups):
         """ choose a best subgroup from `subgroups`
         """
-        chosen_subgroup = None
-        max_size = 0
-        for title, subgroup in subgroups:
-            s = len(subgroup['subinfo_list'])
-            if s > max_size:
-                choosen_subgroup = subgroup
-        return choosen_subgroup
+        subgroup = subgroups[0] if subgroups else None
+        return subgroup
 
     def _filter_subinfo_list(self, subinfo_list, videoname, languages, exts):
         """ filter subinfo list base on:
@@ -221,11 +218,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
             languages_ = subinfo.get('languages')
             exts_ = subinfo.get('exts')
 
-            # print season, season_
-            # print episode, episode_
-            # print languages, languages_, subinfo.get('languages')
-            # print exts, exts_
-            # filter by season and episode
             if (season == season_ and
                 episode == episode_ and
                 set(languages_).intersection(set(languages)) and
@@ -235,7 +227,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         
         if not filtered_subinfo_list:
             return None
-        # get top 5 similarity with videoname
 
         # sort by download_count and rate
         sorted_subinfo_list = sorted(filtered_subinfo_list,
@@ -253,9 +244,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
             return []
-        subgroup = subgroups[0]
+        subgroup = self._filter_subgroup(subgroups)
         
-
         # get subtitles
         headers = {
             'Referer': self.visited_url[-1]
@@ -268,9 +258,9 @@ class ZimukuSubSearcher(BaseSubSearcher):
 
     def _get_downloadpage_link(self, subinfo):
         detail_link = subinfo['link']
+        l = self._join_url(self.API, detail_link)
+        self.visited_url.append(l)
         m = re.search(r'\d+', detail_link)
-        detail_link = self._join_url(self.API, detail_link)
-        self.visited_url.append(detail_link)
         if not m:
             return None
         l = '{}.html'.format(m.group(0))
