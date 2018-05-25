@@ -57,17 +57,21 @@ subfinder 是一个通用字幕查找器，可以自动查找字幕并下载。
 
 ### 命令行
 
-查找单个视频的字幕：
+- 查找单个视频的字幕：
 
     `subfinder /path/to/videofile` 
 
-查找目录下（递归目录）所有视频的字幕：
+- 查找目录下（递归目录）所有视频的字幕：
 
     `subfinder /path/to/directory_contains_video`
 
+- 使用 `zimuku` 查找字幕
+
+    `subfinder /path/to/directory_contains_video -m zimuku`
+
 参数说明
 
-```python
+```bash
 $ subfinder -h
 usage: subfinder [-h] [-l LANGUAGES [LANGUAGES ...]] [-e EXTS [EXTS ...]]
                  [-m METHOD] [-s]
