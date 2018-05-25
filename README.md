@@ -67,7 +67,7 @@ subfinder 是一个通用字幕查找器，可以自动查找字幕并下载。
 
 参数说明
 
-```
+```python
 $ subfinder -h
 usage: subfinder [-h] [-l LANGUAGES [LANGUAGES ...]] [-e EXTS [EXTS ...]]
                  [-m METHOD] [-s]
