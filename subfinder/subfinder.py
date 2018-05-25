@@ -35,7 +35,10 @@ class SubFinder(object):
 
         if subsearcher_class is None:
             subsearcher_class = get_subsearcher('default')
-        self.subsearcher = subsearcher_class()
+        if not isinstance(subsearcher_class, list):
+            subsearcher_class = [subsearcher_class]
+        
+        self.subsearcher = [sc() for sc in subsearcher_class]
 
         # silence: dont print anything
         self.silence = kwargs.get('silence', False)
@@ -112,15 +115,19 @@ class SubFinder(object):
 
     def _download(self, videofile):
         basename = os.path.basename(videofile)
-        self.logger.info('Start search subtitles of {}'.format(basename))
-        try:
-            subinfos = self.subsearcher.search_subs(
-                videofile, self.languages, self.exts)
-        except Exception as e:
-            self.logger.error(
-                'search subinfo of {} happening error: {}'.format(basename, str(e)))
-            return
 
+        subinfos = []
+        for subsearcher in self.subsearcher:
+            self.logger.info('Start search subtitles of {} by {}'.format(basename, subsearcher))
+            try:
+                subinfos = subsearcher.search_subs(
+                    videofile, self.languages, self.exts)
+            except Exception as e:
+                self.logger.error(
+                    'search subinfo of {} happening error: {}'.format(basename, str(e)))
+                continue
+            if subinfos:
+                break                
         self.logger.info('Find {} subtitles for {}, prepare to download'.format(
             len(subinfos), basename))
         try:
@@ -132,6 +139,7 @@ class SubFinder(object):
                     else:
                         self._history[videofile].append(subinfo['subname'])
                 else:
+                    link = subinfo.get('link')
                     subname = subinfo.get('subname')
                     subpath = os.path.join(os.path.dirname(videofile), subname)
                     res = self.session.get(link, stream=True)

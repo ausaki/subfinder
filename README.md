@@ -1,8 +1,7 @@
 # subfinder 字幕查找器
 
-subfinder 是一个通用字幕查找器，可以自动查找字幕并下载。
+subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 
-目前 subfinder 只支持通过射手字幕网提供的 API 进行字幕查找，不过 subfinder 支持自定义字幕查找器，详情参考[扩展](#扩展)
 
 > 名词约定：
 > - subfinder 指的是本项目（工具）。
@@ -57,11 +56,11 @@ subfinder 是一个通用字幕查找器，可以自动查找字幕并下载。
 
 ### 命令行
 
-- 查找单个视频的字幕：
+- 使用默认字幕查找器查找单个视频的字幕：
 
     `subfinder /path/to/videofile` 
 
-- 查找目录下（递归目录）所有视频的字幕：
+- 使用默认字幕查找器查找目录下（递归目录）所有视频的字幕：
 
     `subfinder /path/to/directory_contains_video`
 
@@ -69,13 +68,23 @@ subfinder 是一个通用字幕查找器，可以自动查找字幕并下载。
 
     `subfinder /path/to/directory_contains_video -m zimuku`
 
+- 同时使用多个字幕查找器查找字幕
+
+    `subfinder /path/to/directory_contains_video -m shooter zimuku`
+
+    当指定多个字幕查找器时，subfinder 会依次尝试每个字幕查找器去查找字幕，只要有一个字幕查找器返回字幕信息，则不再使用后面的字幕查找器查找字幕。
+
+    **注意：** 如果指定了多个 `subsearcher_class`，请不要指定 `languages` 参数，否则可能会出现校验错误（LanguageError），因为每个 `SubSearcher` 支持的语言可能不相同。
+
 参数说明
 
 ```bash
 $ subfinder -h
 usage: subfinder [-h] [-l LANGUAGES [LANGUAGES ...]] [-e EXTS [EXTS ...]]
-                 [-m METHOD] [-s]
-                 path
+              [-m METHOD [METHOD ...]] [-s] [-p]
+              path
+
+A general subsearcher, support for custom SubSearcher
 
 positional arguments:
   path                  the video's filename or the directory contains vedio
@@ -86,12 +95,25 @@ optional arguments:
   -l LANGUAGES [LANGUAGES ...], --languages LANGUAGES [LANGUAGES ...]
                         what's languages of subtitle you want to find
   -e EXTS [EXTS ...], --exts EXTS [EXTS ...]
-                        what's format of subtitle you want to find
-  -m METHOD, --method METHOD
-                        what's method you want to use to searching subtitles,
-                        defaults to ShooterSubSearcher. only support
-                        ShooterSubSearcher for now.
+                        what's formats of subtitle you want to find
+  -m METHOD [METHOD ...], --method METHOD [METHOD ...]
+                        what's methods you want to use to searching subtitles,
+                        defaults to ShooterSubSearcher. support methods:
+                        default, shooter, zimuku
   -s, --silence         don't print anything, default to False
+  -p, --pause           pause script after subfinder done. this option is used
+                        in 'Context Menu on Windows' only
+
+Languages & Exts
+
+languages supported by default: [u'Chn', u'Eng']
+exts supported by default: [u'ass', u'srt']
+
+languages supported by shooter: [u'Chn', u'Eng']
+exts supported by shooter: [u'ass', u'srt']
+
+languages supported by zimuku: [u'zh_chs', u'zh_cht', u'en', u'zh_en']
+exts supported by zimuku: [u'ass', u'srt']
 
 ```
 
@@ -165,8 +187,10 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
     |path|文件名或者目录|str|
     |languages|字幕语言， 如果为 None，则由 `subsearcher_class` 自己决定|str or [str]|
     |exts|字幕格式，如果为 None，则由 `subsearcher_class` 自己决定|str or [str]|
-    |subsearcher_class|字幕搜索器，默认是 `ShooterSubSearcher`| subclass of BaseSubSearcher|
+    |subsearcher_class|字幕搜索器，默认是 `ShooterSubSearcher`| BaseSubSearcher or [BaseSubSearcher]|
     
+    **注意：** 如果指定了多个 `subsearcher_class`，请不要指定 `languages` 参数，否则可能会出现校验错误（LanguageError），因为每个 `SubSearcher` 支持的语言可能不相同。
+
 - `start()`
 
     开始查找字幕

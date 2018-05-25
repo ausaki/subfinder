@@ -19,8 +19,8 @@ def method_msg():
     all_subsearchers = get_all_subsearchers()
     support_methods = ', '.join(all_subsearchers.keys())
     default_subsearcher = get_subsearcher('default')
-    msg = '''what's method you want to use to searching subtitles, defaults to {default}.
-support methods: {support_methods}
+    msg = '''what's methods you want to use to searching subtitles, defaults to {default}.
+            support methods: {support_methods}
         '''.format(default=default_subsearcher.__name__, support_methods=support_methods)
     return msg
 
@@ -38,7 +38,8 @@ def epilog():
 
 
 def run(subfinder_class):
-    parser = argparse.ArgumentParser(description='A general subsearcher, support for custom SubSearcher',
+    parser = argparse.ArgumentParser(prog='subfinder',
+                                     description='A general subsearcher, support for custom SubSearcher',
                                      epilog=epilog(),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      )
@@ -51,7 +52,7 @@ def run(subfinder_class):
                         nargs='+',
                         help="what's formats of subtitle you want to find")
     parser.add_argument('-m', '--method',
-                        type=find_method,
+                        nargs='+', type=find_method, default='default',
                         help=method_msg())
     parser.add_argument('-s', '--silence',
                         action='store_true', default=False,
@@ -61,9 +62,6 @@ def run(subfinder_class):
                         help="pause script after subfinder done. this option is used in 'Context Menu on Windows' only")
 
     args = parser.parse_args()
-
-    if args.method is None:
-        args.method = get_subsearcher('default')
 
     if args.languages:
         args.method._check_languages(args.languages)
@@ -75,7 +73,7 @@ def run(subfinder_class):
         args.path = args.path.decode(sys.getfilesystemencoding())
     except AttributeError as e:
         pass
-        
+
     subfinder = subfinder_class(path=args.path,
                                 languages=args.languages,
                                 exts=args.exts,

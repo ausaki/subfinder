@@ -84,17 +84,27 @@ class BaseSubSearcher(object):
         """
         pass
 
+    def __str__(self):
+        if hasattr(self.__class__, 'shortname'):
+            name = self.__class__.shortname
+        else:
+            name = self.__class__.__name__
+        return '<{}>'.format(name)
+
+    def __unicode__(self):
+        return self.__str__()
+
     @classmethod
     def _check_languages(cls, languages):
         for lang in languages:
             if lang not in cls.SUPPORT_LANGUAGES:
                 raise exceptions.LanguageError(
-                    '{} don\'t support {} language'.format(cls.__name__, lang))
+                    '{} don\'t support "{}" language'.format(cls.__name__, lang))
 
     @classmethod
     def _check_exts(cls, exts):
         for ext in exts:
             if ext not in cls.SUPPORT_EXTS:
                 raise exceptions.ExtError(
-                    '{} don\'t support {} ext'.format(cls.__name__, ext))
+                    '{} don\'t support "{}" ext'.format(cls.__name__, ext))
 
