@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals
 import os
+import sys
 import argparse
 
 
@@ -26,6 +27,13 @@ def main():
                         help="delete all subtitles in PATH recursively.the PATH defaults to CWD")
 
     args = parser.parse_args()
+
+    # try to decode str to unicode in python2
+    try:
+        args.delete_subs = args.delete_subs.decode(sys.getfilesystemencoding())
+    except AttributeError as e:
+        pass
+
     if args.delete_subs:
         print('Start delete subtitles in {}'.format(args.delete_subs))
         c = rm_subtitles(args.delete_subs)
