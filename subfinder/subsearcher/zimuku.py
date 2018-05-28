@@ -1,6 +1,6 @@
 # -*- coding: utf8 -*-
 
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 import os
 import re
 import json
@@ -113,6 +113,27 @@ class ZimukuSubSearcher(BaseSubSearcher):
             info['episode'] = int(m.group('episode'))
             return info
     
+    def _parse_downloadcount(self, text):
+        """ parse download count
+        text format maybe:
+        - pure number: 1000
+        - number + unit: 1万
+        """
+        unit_map = {
+            '千': 1000,
+            '万': 10000,
+            '百万': 1000000,
+        }
+
+        m = re.match(ur'(\d+(?:\.\d+)?)(\w?)', text, re.UNICODE)
+        if m:
+            n = float(m.group(1))
+            u = m.group(2)
+            u = unit_map.get(u, 1)
+            return n * u
+        else:
+            return 0
+
     def _parse_search_results_html(self, doc):
         """ parse search result html, return subgroups
         subgroups: [{ 'title': title, 'link': link}]
@@ -185,7 +206,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             ele_td = tr.select('td.tac')
             if ele_td:
                 ele_td = ele_td[-1]
-                subinfo['download_count'] = int(ele_td.get_text().strip())
+                subinfo['download_count'] = self._parse_downloadcount(ele_td.get_text().strip())
             subinfo_list.append(subinfo)
         return subinfo_list
     
@@ -373,4 +394,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
 if __name__ == '__main__':
     s = ZimukuSubSearcher()
     p = os.path.expanduser('~/Downloads/test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
-    s.search_subs(p)
+    print(s.search_subs('Westworld.S02E06.720p.WEB.H264-DEFLATE'))
