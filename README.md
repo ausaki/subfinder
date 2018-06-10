@@ -33,24 +33,50 @@ subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 - gevent
 
 
-**使用自带工具安装**
+**有 3 种方法安装 SubFinder**
+
+第 1 种：
 
 - `git clone https://github.com/ausaki/subfinder`
 
-- `python setup.py install`
+- `cd subfinder`
 
+- `pip install .`
 
-**使用 pip 安装**
+第 2 种：
 
-`pip install git+https://github.com/ausaki/subfinder`
+- `pip install git+https://github.com/ausaki/subfinder`
 
-或者
+第 3 种：
 
-`pip install subfinder`
+- `pip install subfinder`
+
+> 为了保证安装最新版，推荐使用第 2 种方法。
 
 安装完成之后，会在 Python 的 scripts 目录下添加一个叫做 subfinder 的可执行文件。
 
 > 在 unix-like 系统中，scripts 目录一般是 `/usr/local/bin`，在 Windows 系统中，scripts 目录一般是 `C:\python\scripts\`。在 Windows 系统中需要将`C:\python\scripts\` 加入到 `PATH` 中（一般安装 Python 时已经添加了）。
+
+**更新**
+
+安装方式不同，更新方法也不同。
+
+第 1 种：
+
+在项目目录执行：
+
+- `git pull`
+
+- `pip install . --upgrade`
+
+第 2 种：
+
+`pip install git+https://github.com/ausaki/subfinder --upgrade`
+
+第 3 种：
+
+`pip install subfinder --upgrade`
+
 
 ## 使用方法
 
