@@ -32,9 +32,13 @@ def mv_videos(path):
                 sf = os.path.join(f, sf)
                 if os.path.isfile(sf):
                     new_name = os.path.join(path, os.path.basename(sf))
-                    os.rename(sf, new_name)
-                    count += 1
-                    print('mv {} to {}'.format(sf, new_name))
+                    try:
+                        os.rename(sf, new_name)
+                    except (WindowsError, OSError) as e:
+                        print('mv {} happens error: {}'.format(sf, e))
+                    else:
+                        count += 1
+                        print('mv {} to {}'.format(sf, new_name))
     return count
 
 
@@ -62,6 +66,7 @@ def main():
         try:
             args.move_videos = args.move_videos.decode(sys.getfilesystemencoding())
         except AttributeError as e:
+            print('error')
             pass
         print('Start move videos in {}'.format(args.move_videos))
         c = mv_videos(args.move_videos)
