@@ -90,28 +90,55 @@ class ZimukuSubSearcher(BaseSubSearcher):
         name = os.path.splitext(name)[0]
         return name
 
-    re_video_name = re.compile(r'^(?P<basename>.*)\.[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)\..*$')
-    
     def _parse_videoname(self, videoname):
         """ parse videoname and return video info dict
         video info contains:
-        - basename
+        - title, the name of video
+        - sub_title, the sub_title of video
+        - resolution,
+        - source,
+        - 
         - season, defaults to 0
         - episode, defaults to 0
         """
         info = {
-            'basename': videoname,
+            'title': videoname,
             'season': 0,
-            'episode': 0
+            'episode': 0,
+            'sub_title': '',
+            'resolution': '',
+            'source': '',
+            'audio_encoding': '',
+            'video_encoding': '',
         }
-        # this pat try to find season and episode
-        m = self.re_video_name.match(videoname)
-        if m is None:
-            return info
-        else:
+        last_index = 0
+        m = re.search(r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)', videoname)
+        if m:
             info['season'] = int(m.group('season'))
             info['episode'] = int(m.group('episode'))
-            return info
+            s, e = m.span()
+            info['title'] = videoname[0:s].strip('.')
+            last_index = e
+
+        m = re.search(r'(?P<resolution>720[Pp]|1080[Pp]|HR)', videoname[last_index:])
+        if m:
+            info['resolution'] = m.group('resolution')
+            s, e = m.span()
+            info['sub_title'] = videoname[last_index:s].strip('.')
+            last_index = e
+        
+        m = re.search(r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.', videoname)
+        if m:
+            info['source'] = m.group('source')
+
+        m = re.search(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)', videoname)
+        if m:
+            info['audio_encoding'] = m.group('audio_encoding')
+
+        m = re.search(r'(?P<video_encoding>x264|H264|AVC1|H.265)', videoname)
+        if m:
+            info['video_encoding'] = m.group('video_encoding')
+        return info
     
     def _parse_downloadcount(self, text):
         """ parse download count
@@ -228,15 +255,30 @@ class ZimukuSubSearcher(BaseSubSearcher):
         videoinfo = self._parse_videoname(videoname)
         season = videoinfo.get('season')
         episode = videoinfo.get('episode')
+        resolution = videoinfo.get('resolution')
+        source = videoinfo.get('source')
+        video_encoding = videoinfo.get('video_encoding')
+        audio_encoding = videoinfo.get('audio_encoding')
 
+        filtered_subinfo_list_1 = []
+        filtered_subinfo_list_2 = []
+        filtered_subinfo_list_3 = []
+        filtered_subinfo_list_4 = []
+        filtered_subinfo_list_5 = []
         filtered_subinfo_list = []
-        
+
         for subinfo in subinfo_list:
             title = subinfo.get('title')
             videoinfo_ = self._parse_videoname(title)
             season_ = videoinfo_.get('season')
             episode_ = videoinfo_.get('episode')
+            resolution_ = videoinfo_.get('resolution')
+            source_ = videoinfo_.get('source')
+            video_encoding_ = videoinfo_.get('video_encoding')
+            audio_encoding_ = videoinfo_.get('audio_encoding')
             languages_ = subinfo.get('languages')
+            
+
             exts_ = subinfo.get('exts')
 
             if (season == season_ and
@@ -244,11 +286,28 @@ class ZimukuSubSearcher(BaseSubSearcher):
                 set(languages_).intersection(set(languages)) and
                 set(exts_).intersection(set(exts))):
                 
-                filtered_subinfo_list.append(subinfo)
-        
+                filtered_subinfo_list_1.append(subinfo)
+                if resolution_ == resolution:
+                    filtered_subinfo_list_2.append(subinfo)
+                    if source_ == source:
+                        filtered_subinfo_list_3.append(subinfo)
+                        if video_encoding_ == video_encoding:
+                            filtered_subinfo_list_4.append(subinfo)
+                            if audio_encoding_ == audio_encoding:
+                                filtered_subinfo_list_5.append(subinfo)
+        if filtered_subinfo_list_5:
+            filtered_subinfo_list = filtered_subinfo_list_5
+        elif filtered_subinfo_list_4:
+            filtered_subinfo_list = filtered_subinfo_list_4
+        elif filtered_subinfo_list_3:
+            filtered_subinfo_list = filtered_subinfo_list_3
+        elif filtered_subinfo_list_2:
+            filtered_subinfo_list = filtered_subinfo_list_2
+        elif not filtered_subinfo_list_1:
+            filtered_subinfo_list = filtered_subinfo_list_1
+
         if not filtered_subinfo_list:
             return None
-
         # sort by download_count and rate
         sorted_subinfo_list = sorted(filtered_subinfo_list,
                                      key=lambda item: (item['rate'], item['download_count']),
@@ -372,7 +431,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         
         # try find subinfo_list from self._cache
         videoinfo = self._parse_videoname(videoname)
-        basename = videoinfo.get('basename')
+        print(videoinfo)
+        basename = videoinfo.get('title')
         if basename not in self._cache:
             subinfo_list = self._get_subinfo_list(videoname)
             self._cache[basename] = subinfo_list
@@ -382,6 +442,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
         if not subinfo:
             return []
+        print(subinfo)
+        print(self._parse_videoname(subinfo['title']))
         subs = self._download_subs(subinfo, videofile)
         return [{
             'link': self.visited_url[-1],
