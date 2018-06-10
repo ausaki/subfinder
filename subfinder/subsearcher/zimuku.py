@@ -431,7 +431,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         
         # try find subinfo_list from self._cache
         videoinfo = self._parse_videoname(videoname)
-        print(videoinfo)
         basename = videoinfo.get('title')
         if basename not in self._cache:
             subinfo_list = self._get_subinfo_list(videoname)
@@ -442,8 +441,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
         if not subinfo:
             return []
-        print(subinfo)
-        print(self._parse_videoname(subinfo['title']))
         subs = self._download_subs(subinfo, videofile)
         return [{
             'link': self.visited_url[-1],
