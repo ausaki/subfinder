@@ -303,7 +303,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             filtered_subinfo_list = filtered_subinfo_list_3
         elif filtered_subinfo_list_2:
             filtered_subinfo_list = filtered_subinfo_list_2
-        elif not filtered_subinfo_list_1:
+        elif filtered_subinfo_list_1:
             filtered_subinfo_list = filtered_subinfo_list_1
 
         if not filtered_subinfo_list:
@@ -366,13 +366,23 @@ class ZimukuSubSearcher(BaseSubSearcher):
         return download_link
     
     def _gen_subname(self, videofile, orig_subname, subinfo):
+        # orig_subname is a bytes string
+        try:
+            orig_subname = orig_subname.decode('utf8')
+        except UnicodeDecodeError:
+            orig_subname = orig_subname.decode('gbk')
+        except AttributeError:
+            pass
+        language = []
+        try:
+            for l in self.COMMON_LANGUAGES:
+                if orig_subname.find(l) >= 0:
+                    language.append(l)
+        except Exception:
+            pass
+        language = '.'.join(language)
         basename = os.path.basename(videofile)
         basename, _ = os.path.splitext(basename)
-        language = []
-        for l in self.COMMON_LANGUAGES:
-            if orig_subname.find(l) >= 0:
-                language.append(l)
-        language = '.'.join(language)
         _, ext = os.path.splitext(orig_subname)
         return '{basename}.{language}{ext}'.format(
             basename=basename,
@@ -437,7 +447,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
             self._cache[basename] = subinfo_list
         else:
             subinfo_list = self._cache.get(basename)
-        
         subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
         if not subinfo:
             return []
@@ -453,4 +462,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
 if __name__ == '__main__':
     s = ZimukuSubSearcher()
     p = os.path.expanduser('~/Downloads/test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
-    print(s.search_subs('Westworld.S02E06.720p.WEB.H264-DEFLATE'))
+    print(s.search_subs('Westworld.S02E10.REPACK.The.Passenger.720p.AMZN.WEB-DL.DDP5.1.H.264-NTb'))
