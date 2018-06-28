@@ -36,4 +36,6 @@ setup(name='SubFinder',
             ]
       },
       install_requires=requires,
-      )
+      setup_requires=["pytest-runner", ],
+      tests_require=["pytest", ],
+    )

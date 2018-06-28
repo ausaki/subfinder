@@ -4,3 +4,4 @@ lxml
 bs4
 gevent
 rarfile
+six

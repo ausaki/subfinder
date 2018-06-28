@@ -48,11 +48,12 @@ class ShooterSubSearcher(BaseSubSearcher):
         result = {}
         for language in languages:
             payload['lang'] = language
-            try:
-                res = self.session.post(self.API_URL, data=payload)
-                result[language] = res.json()
-            except Exception as e:
-                raise exceptions.ShooterAPIError(str(e))
+            res = self.session.post(self.API_URL, data=payload)
+            if res.status_code == requests.codes.ok:
+                try:
+                    result[language] = res.json()
+                except Exception as e:
+                    result[language] = []
 
         subinfos = []
         for language, subinfolist in result.items():

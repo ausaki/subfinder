@@ -10,6 +10,7 @@ except ImportError as e:
     from urllib import parse as urlparse
 import requests
 import bs4
+import six
 from .subsearcher import BaseSubSearcher
 from . import exceptions
 
@@ -120,11 +121,12 @@ class ZimukuSubSearcher(BaseSubSearcher):
             info['title'] = videoname[0:s].strip('.')
             last_index = e
 
-        m = re.search(r'(?P<resolution>720[Pp]|1080[Pp]|HR)', videoname[last_index:])
+        m = re.search(r'(?P<resolution>720[Pp]|1080[Pp]|HR)', videoname)
         if m:
             info['resolution'] = m.group('resolution')
             s, e = m.span()
-            info['sub_title'] = videoname[last_index:s].strip('.')
+            if info['season'] > 0 and info['episode'] > 0:
+                info['sub_title'] = videoname[last_index:s].strip('.')
             last_index = e
         
         m = re.search(r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.', videoname)
@@ -152,12 +154,12 @@ class ZimukuSubSearcher(BaseSubSearcher):
             '百万': 1000000,
         }
 
-        m = re.match(ur'(\d+(?:\.\d+)?)(\w?)', text, re.UNICODE)
+        m = re.match(r'^(\d+(?:\.\d+)?)(\w{0,2})$', text, re.UNICODE)
         if m:
             n = float(m.group(1))
             u = m.group(2)
             u = unit_map.get(u, 1)
-            return n * u
+            return int(n * u)
         else:
             return 0
 
@@ -366,13 +368,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         return download_link
     
     def _gen_subname(self, videofile, orig_subname, subinfo):
-        # orig_subname is a bytes string
-        try:
-            orig_subname = orig_subname.decode('utf8')
-        except UnicodeDecodeError:
-            orig_subname = orig_subname.decode('gbk')
-        except AttributeError:
-            pass
         language = []
         try:
             for l in self.COMMON_LANGUAGES:
@@ -388,6 +383,23 @@ class ZimukuSubSearcher(BaseSubSearcher):
             basename=basename,
             language=language,
             ext=ext)
+
+    @staticmethod
+    def _decode_archive_file_name(name):
+        if six.PY3:
+            try:
+                name = name.encode('cp437')
+            except UnicodeEncodeError as e:
+                pass
+        if isinstance(name, six.binary_type):
+            try:
+                name = name.decode('gbk')
+            except UnicodeDecodeError as e:
+                try:
+                    name = name.decode('utf8')
+                except UnicodeDecodeError as e:
+                    pass
+        return name
 
     def _download_subs(self, subinfo, videofile):
         """download archived sub
@@ -415,7 +427,9 @@ class ZimukuSubSearcher(BaseSubSearcher):
             af = ArchiveFile(path)
             for name in af.namelist():
                 if not af.isdir(name):
-                    subname = self._gen_subname(videofile, name, subinfo)
+                    # make `name` to unicode string
+                    orig_name = self._decode_archive_file_name(name)
+                    subname = self._gen_subname(videofile, orig_name, subinfo)
                     subpath = os.path.join(root, subname)
                     af.extract(name, subpath)
                     subs.append(subpath)

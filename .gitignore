@@ -2,6 +2,7 @@
 dist/
 build/
 SubFinder.egg-info/
-subfinder.workflow/
+.eggs/
+.pytest_cache
 *.py[co]
 *.log

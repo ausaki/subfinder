@@ -1,10 +1,12 @@
 # -*- coding: utf8 -*-
-from __future__ import unicode_literals
+from __future__ import unicode_literals, print_function
 import sys
+import time
 import argparse
+import six
 from .subsearcher import get_subsearcher, get_all_subsearchers
 from .subfinder import SubFinder
-import time
+from . import __version__
 
 
 def find_method(m):
@@ -39,7 +41,7 @@ def epilog():
 
 def run(subfinder_class):
     parser = argparse.ArgumentParser(prog='subfinder',
-                                     description='A general subsearcher, support for custom SubSearcher',
+                                     description='A general subfinder, support for custom subsearcher',
                                      epilog=epilog(),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      )
@@ -60,6 +62,9 @@ def run(subfinder_class):
     parser.add_argument('-p', '--pause',
                         action='store_true', default=False,
                         help="pause script after subfinder done. this option is used in 'Context Menu on Windows' only")
+    parser.add_argument('-v', '--version',
+                        action='version', version='subfinder {v}'.format(v=__version__),
+                        help="show subfinder's version")
 
     args = parser.parse_args()
 
@@ -68,11 +73,9 @@ def run(subfinder_class):
     if args.exts:
         args.method._check_exts(args.exts)
 
-    # try to decode str to unicode in python2
-    try:
+    # try to make `path` to unicode string in python2
+    if six.PY2 and isinstance(args.path, six.binary_type):
         args.path = args.path.decode(sys.getfilesystemencoding())
-    except AttributeError as e:
-        pass
 
     subfinder = subfinder_class(path=args.path,
                                 languages=args.languages,
