@@ -25,10 +25,13 @@ with open('requirements.txt') as fp:
 
 setup(name='SubFinder',
       version=version,
-      description='SubFiner',
+      description='subfinder -- a general finder for subtitles',
       author=author,
+      author_email='ljm51689@gmail.com',
       url='https://github.com/ausaki/subfinder/',
+      license='MIT',
       packages=['subfinder', 'subfinder.subsearcher'],
+      include_package_data=True,
       entry_points={
             'console_scripts': [
                   'subfinder = subfinder.run_gevent:run',
@@ -36,6 +39,4 @@ setup(name='SubFinder',
             ]
       },
       install_requires=requires,
-      setup_requires=["pytest-runner", ],
-      tests_require=["pytest", ],
     )

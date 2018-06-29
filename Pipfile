@@ -1,0 +1,19 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[dev-packages]
+tox = "*"
+
+[packages]
+requests = "*"
+lxml = "*"
+"bs4" = "*"
+gevent = "*"
+rarfile = "*"
+six = "*"
+subfinder = {path = ".", editable = true}
+
+[requires]
+python_version = "2.7"

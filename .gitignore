@@ -3,6 +3,7 @@ dist/
 build/
 SubFinder.egg-info/
 .eggs/
-.pytest_cache
+.pytest_cache/
+.tox/
 *.py[co]
 *.log
