@@ -5,7 +5,7 @@ name = "pypi"
 
 [scripts]
 test = 'tox'
-build = 'python setup.py sdist bdist_whell'
+build = 'python setup.py sdist bdist_wheel'
 publish = 'twine upload -r pypi dist'
 
 [dev-packages]
