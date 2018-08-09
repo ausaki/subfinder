@@ -4,6 +4,7 @@ from __future__ import unicode_literals, print_function
 import os
 import re
 import json
+import cgi
 try:
     import urlparse
 except ImportError as e:
@@ -29,6 +30,24 @@ class ArchiveFile(object):
         else:
             import rarfile
             self._file = rarfile.RarFile(self.file, 'r')
+
+    @staticmethod
+    def decode_archive_file_name(name):
+        if six.PY3:
+            try:
+                name = name.encode('cp437')
+            except UnicodeEncodeError as e:
+                pass
+        if isinstance(name, six.binary_type):
+            try:
+                name = name.decode('gbk')
+            except UnicodeDecodeError as e:
+                try:
+                    name = name.decode('utf8')
+                except UnicodeDecodeError as e:
+                    pass
+        return name
+
     @classmethod
     def is_archivefile(cls, filename):
         _, ext = os.path.splitext(filename)
@@ -61,9 +80,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
     SUPPORT_EXTS = ['ass', 'srt']
     LANGUAGES_MAP = {
         '简体中文字幕': 'zh_chs',
+        '简体中文': 'zh_chs',
         '繁體中文字幕': 'zh_cht',
+        '繁體中文': 'zh_cht',
         'English字幕': 'en',
-        '双语字幕': 'zh_en'
+        'English': 'en',
+        'e  nglish': 'en',
+        '双语字幕': 'zh_en',
+        '双语': 'zh_en'
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体', '简体&英文', '繁体&英文',]
 
@@ -103,7 +127,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         - episode, defaults to 0
         """
         info = {
-            'title': videoname,
+            'title': '',
             'season': 0,
             'episode': 0,
             'sub_title': '',
@@ -125,6 +149,9 @@ class ZimukuSubSearcher(BaseSubSearcher):
         if m:
             info['resolution'] = m.group('resolution')
             s, e = m.span()
+            if info['title'] == '':
+                info['title'] = videoname[0:s].strip('.')
+
             if info['season'] > 0 and info['episode'] > 0:
                 info['sub_title'] = videoname[last_index:s].strip('.')
             last_index = e
@@ -384,51 +411,50 @@ class ZimukuSubSearcher(BaseSubSearcher):
             language=language,
             ext=ext)
 
-    @staticmethod
-    def _decode_archive_file_name(name):
-        if six.PY3:
-            try:
-                name = name.encode('cp437')
-            except UnicodeEncodeError as e:
-                pass
-        if isinstance(name, six.binary_type):
-            try:
-                name = name.decode('gbk')
-            except UnicodeDecodeError as e:
-                try:
-                    name = name.decode('utf8')
-                except UnicodeDecodeError as e:
-                    pass
-        return name
 
     def _download_subs(self, subinfo, videofile):
         """download archived sub
         """
         root = os.path.dirname(videofile)
         name, _ = os.path.splitext(os.path.basename(videofile))
-        title = subinfo['title']
-        _, ext = os.path.splitext(title)
-        name = '{}{}'.format(name, ext)
-        path = os.path.join(root, name)
+        _, ext = os.path.splitext(subinfo['title'])
+        ext = ext[1:]
         
         link = self._get_downloadpage_link(subinfo)
         subtitle_download_link = self._get_subtitle_download_link(link)
-        
         headers = {
             'Referer': self.visited_url[-1]
         }
         res = self.session.get(subtitle_download_link, headers=headers, stream=True)
         self.visited_url.append(res.url)
+
+        # try get ext from Content-Disposition
+        if ext not in ArchiveFile.EXTS:
+            content_disposition = res.headers.get('Content-Disposition')
+            _, params = cgi.parse_header(content_disposition)
+            filename = params.get('filename')
+            if filename:
+                _, ext = os.path.splitext(filename)
+                ext = ext[1:]
+        
+        name = '{}.{}'.format(name, ext)
+        path = os.path.join(root, name)
         with open(path, 'wb') as fp:
             for chunk in res.iter_content(8192):
                 fp.write(chunk)
+
         if ArchiveFile.is_archivefile(path):
             subs = []
             af = ArchiveFile(path)
             for name in af.namelist():
                 if not af.isdir(name):
                     # make `name` to unicode string
-                    orig_name = self._decode_archive_file_name(name)
+                    orig_name = ArchiveFile.decode_archive_file_name(name)
+                    _, ext = os.path.splitext(orig_name)
+                    ext = ext[1:]
+                    if ext not in self.SUPPORT_EXTS:
+                        continue
+                        
                     subname = self._gen_subname(videofile, orig_name, subinfo)
                     subpath = os.path.join(root, subname)
                     af.extract(name, subpath)
@@ -455,12 +481,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
         
         # try find subinfo_list from self._cache
         videoinfo = self._parse_videoname(videoname)
-        basename = videoinfo.get('title')
-        if basename not in self._cache:
-            subinfo_list = self._get_subinfo_list(videoname)
-            self._cache[basename] = subinfo_list
+        keyword = videoinfo.get('title')
+        if videoinfo['season'] != 0:
+            keyword += '.S{:02d}'.format(videoinfo['season'])
+        if keyword not in self._cache:
+            subinfo_list = self._get_subinfo_list(keyword)
+            self._cache[keyword] = subinfo_list
         else:
-            subinfo_list = self._cache.get(basename)
+            subinfo_list = self._cache.get(keyword)
         subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
         if not subinfo:
             return []
@@ -476,4 +504,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
 if __name__ == '__main__':
     s = ZimukuSubSearcher()
     p = os.path.expanduser('~/Downloads/test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
-    print(s.search_subs('Westworld.S02E10.REPACK.The.Passenger.720p.AMZN.WEB-DL.DDP5.1.H.264-NTb'))
+    print(s.search_subs('Yellowstone.2018.S01E01.Daybreak.720p.AMZN.WEB-DL.DDP2.0.H.264-NTb.mkv'))

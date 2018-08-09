@@ -29,7 +29,7 @@ class TestZimukuSubSearcher:
     def test_parse_videoname(self, zimuku):
         test_cases = {
             'TV_TITLE.720p.HDTV.x264-AVS': {
-                'title': 'TV_TITLE.720p.HDTV.x264-AVS',
+                'title': 'TV_TITLE',
                 'season': 0,
                 'episode': 0,
                 'sub_title': '',

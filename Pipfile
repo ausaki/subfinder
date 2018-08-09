@@ -3,8 +3,15 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[scripts]
+test = 'tox'
+build = 'python setup.py sdist bdist_whell'
+publish = 'twine upload -r pypi dist'
+
 [dev-packages]
 tox = "*"
+subfinder = {path = ".", editable = true}
+twine = "*"
 
 [packages]
 requests = "*"
@@ -13,7 +20,6 @@ lxml = "*"
 gevent = "*"
 rarfile = "*"
 six = "*"
-subfinder = {path = ".", editable = true}
 
 [requires]
 python_version = "2.7"
