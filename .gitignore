@@ -7,3 +7,4 @@ SubFinder.egg-info/
 .tox/
 *.py[co]
 *.log
+debug_zimuku.py
