@@ -12,6 +12,7 @@ publish = 'twine upload -r pypi dist'
 tox = "*"
 subfinder = {path = ".", editable = true}
 twine = "*"
+pyinstaller = "*"
 
 [packages]
 requests = "*"
