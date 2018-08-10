@@ -164,14 +164,12 @@ exts supported by zimuku: [u'ass', u'srt']
 
 为了方便 Windows 和 MacOS 用户，使用 Python 自带的 Tkinter 写了一个简单的 app。
 
-
-
-
 - Windows 用户下载 SubFinder.exe文件，直接打开就可以了。界面比较简单，看一下就知道如何使用。
 
-- MacOS 用户下载 SubFinder.app.tar.gz文件，需要先解压获得 SubFinder.app。界面和 Windows 的一样。
+- MacOS 用户下载 SubFinder 文件。界面和 Windows 的一样。
 
 **注意**
+
 - gui app默认同时使用shooter 和 zimuku两个字幕搜索器。
 
 - gui app同样支持命令行参数。

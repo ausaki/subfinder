@@ -3,6 +3,11 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
+[[source]]
+url = "https://pypi.doubanio.com/simple/"
+verify_ssl = true
+name = "douban"
+
 [scripts]
 test = 'tox'
 build = 'python setup.py sdist bdist_wheel'

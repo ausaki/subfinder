@@ -1,8 +1,7 @@
 # -*- mode: python -*-
 
 block_cipher = None
-import sys
-import shutil
+
 
 a = Analysis(['app.py'],
              pathex=['../', '/Users/jiaminlu/git_repository/subfinder/app'],
@@ -16,7 +15,7 @@ a = Analysis(['app.py'],
              win_private_assemblies=False,
              cipher=block_cipher)
 pyz = PYZ(a.pure, a.zipped_data,
-          cipher=block_cipher)
+             cipher=block_cipher)
 exe = EXE(pyz,
           a.scripts,
           a.binaries,
@@ -27,14 +26,4 @@ exe = EXE(pyz,
           strip=False,
           upx=True,
           runtime_tmpdir=None,
-          console=False)
-app = BUNDLE(exe,
-             name='SubFinder.app',
-             icon=None,
-             bundle_identifier=None,
-             info_plist={
-                'NSHighResolutionCapable': 'True'
-             })
-
-shutil.make_archive('./dist/SubFinder.app', format='gztar',
-                    root_dir='./dist', base_dir='./')
+          console=True )
