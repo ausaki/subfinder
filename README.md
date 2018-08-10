@@ -11,17 +11,17 @@ subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 
 ## 特性
 
-- 通过射手字幕网提供的 API，可以精确匹配字幕
+- 通过射手字幕网提供的 API，可以精确匹配字幕。
 
-- 支持从[字幕库](https://www.zimuku.cn/)搜索字幕
+- 支持从[字幕库](https://www.zimuku.cn/)搜索字幕。
 
-- 支持指定语言和格式查找字幕
+- 支持指定语言和格式查找字幕。
 
-- 自动将字幕下载至和视频文件相同的目录
+- 自动将字幕下载至和视频文件相同的目录，自动将字幕文件重命名为视频文件名，方便播放器自动加载字幕。
 
-- 自动将字幕文件重命名为视频文件名，方便播放器自动加载字幕
+- 支持线程和协程并发下载。
 
-- 支持 python2 和 python3
+- 支持 python2 和 python3。
 
 ## 安装
 
@@ -163,6 +163,19 @@ exts supported by zimuku: [u'ass', u'srt']
 ## 图形界面
 
 为了方便 Windows 和 MacOS 用户，使用 Python 自带的 Tkinter 写了一个简单的 app。
+
+
+
+
+- Windows 用户下载 SubFinder.exe文件，直接打开就可以了。界面比较简单，看一下就知道如何使用。
+
+- MacOS 用户下载 SubFinder.app.tar.gz文件，需要先解压获得 SubFinder.app。界面和 Windows 的一样。
+
+**注意**
+- gui app默认同时使用shooter 和 zimuku两个字幕搜索器。
+
+- gui app同样支持命令行参数。
+
 
 [下载页面](https://github.com/ausaki/subfinder/releases)
 

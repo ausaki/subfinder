@@ -13,6 +13,7 @@ tox = "*"
 subfinder = {path = ".", editable = true}
 twine = "*"
 pyinstaller = "*"
+"autopep8" = "*"
 
 [packages]
 requests = "*"

@@ -1,4 +1,4 @@
-#-*- coding: utf8 -*-
+# -*- coding: utf8 -*-
 import sys
 try:
     import tkinter as tk
@@ -6,18 +6,21 @@ try:
     from queue import Queue, Empty
 except ImportError as e:
     import Tkinter as tk
-    import tkFileDialog as filedialog, tkMessageBox as messagebox
+    import tkFileDialog as filedialog
+    import tkMessageBox as messagebox
     from Queue import Queue, Empty
 from threading import Thread
 import os
 from subfinder.subfinder_thread import SubFinderThread as SubFinder
+from subfinder.subsearcher import get_subsearcher
+from subfinder.run_thread import run
 
 
 class OutputStream():
     def __init__(self, text_widget):
         self.text = text_widget
         self.msg_queue = Queue(100)
-    
+
     def display(self):
         while True:
             try:
@@ -32,21 +35,21 @@ class OutputStream():
 
     def write(self, text):
         self.msg_queue.put(text)
-    
+
     def writeline(self, line):
         self.write(line + '\n')
-    
+
     def writelines(self, lines):
         for line in lines:
             self.writeline(line)
-    
+
     def close(self):
         pass
 
     def flush(self):
         pass
 
-        
+
 class Application(tk.Frame, object):
 
     def __init__(self, master=None, cnf={}, **kw):
@@ -54,11 +57,11 @@ class Application(tk.Frame, object):
         self.title = 'SubFinder'
         self.videofile = ''
         self._output = None
-        
+
         # self.master.geometry('300x100')
         self.master.title(self.title)
         self.pack(fill=tk.BOTH, expand=tk.YES, padx=10, pady=10)
-        
+
         self._create_widgets()
 
     def _start(self):
@@ -66,12 +69,14 @@ class Application(tk.Frame, object):
             messagebox.showwarning('提示', '请先选择视频文件或目录')
             return
 
-        def start(path, *args, **kwargs):
-            subfinder = SubFinder(path=path, *args, **kwargs)    
+        def start(*args, **kwargs):
+            subfinder = SubFinder(*args, **kwargs)
             subfinder.start()
             subfinder.done()
-        
-        t = Thread(target=start, args=[self.videofile, ], kwargs=dict(logger_output=self._output))
+
+        subsearchers = [get_subsearcher('shooter'), get_subsearcher('zimuku')]
+        t = Thread(target=start, args=[self.videofile, ], kwargs=dict(
+            logger_output=self._output, subsearcher_class=subsearchers))
         t.start()
 
     def _open_file(self):
@@ -90,7 +95,7 @@ class Application(tk.Frame, object):
             self.videofile = filedialog.askdirectory(initialdir='~/Downloads/test',
                                                      title="选择一个目录")
         self.label_selected['text'] = self.videofile
-    
+
     def _display_msg(self):
         self._output.display()
         self.after(100, self._display_msg)
@@ -133,6 +138,9 @@ class Application(tk.Frame, object):
         tk.Grid.columnconfigure(self, 1, weight=1)
 
 
-# window = tk.Tk()
-app = Application()
-app.mainloop()
+if __name__ == '__main__':
+    if len(sys.argv) > 1:
+        run()
+    else:
+        app = Application()
+        app.mainloop()
