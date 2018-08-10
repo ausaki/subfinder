@@ -4,4 +4,4 @@
 
 rm -rf build dist
 
-pyinstaller SubFinder.macos.spec -y
+pipenv run pyinstaller SubFinder.macos.spec -y
