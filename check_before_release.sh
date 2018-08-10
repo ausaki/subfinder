@@ -12,30 +12,28 @@ set -e
 
 DIR="$(pwd)"
 
-version=$1
-
-
 # run test
+echo
+echo "Start testing..."
 pipenv run test
 
 # packaging
+echo
+echo "Start building..."
 rm -rf dist/*
 pipenv run build
+
 # pyinstaller packaing executable app
+echo
+echo "Start building app..."
 cd app
-rm -rf build dist
-pipenv run pyinstaller SubFinder.macos.spec -y
+./build.sh
 
+cd $DIR
 # publish to test.pypi
+echo
+echo "Start upload subfinder to test.pypi"
 pipenv run twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
-# publish to pypi
-pipenv run twine upload dist/*
-
-# commit and push to github
-git add .
-git commit -m "version: $version"
-git push
 
 
 
