@@ -37,7 +37,7 @@ class SubFinder(object):
             subsearcher_class = get_subsearcher('default')
         if not isinstance(subsearcher_class, list):
             subsearcher_class = [subsearcher_class]
-        
+
         self.subsearcher = [sc() for sc in subsearcher_class]
 
         # silence: dont print anything
@@ -51,7 +51,6 @@ class SubFinder(object):
 
         # _history: recoding downloading history
         self._history = {}
-
 
     def _is_videofile(self, f):
         """ determine `f` is a valid video file
@@ -118,7 +117,8 @@ class SubFinder(object):
 
         subinfos = []
         for subsearcher in self.subsearcher:
-            self.logger.info('Start search subtitles of {} by {}'.format(basename, subsearcher))
+            self.logger.info(
+                'Start search subtitles of {} by {}'.format(basename, subsearcher))
             try:
                 subinfos = subsearcher.search_subs(
                     videofile, self.languages, self.exts)
@@ -127,7 +127,7 @@ class SubFinder(object):
                     'search subinfo of {} happening error: {}'.format(basename, str(e)))
                 continue
             if subinfos:
-                break                
+                break
         self.logger.info('Find {} subtitles for {}, prepare to download'.format(
             len(subinfos), basename))
         try:
@@ -172,7 +172,8 @@ class SubFinder(object):
         self.logger.info('='*20 + 'Done! enjoying the movies!' + '='*20)
         for v, subs in self._history.items():
             basename = os.path.basename(v)
-            self.logger.info('{}: find {} subtitles'.format(basename, len(subs)))
+            self.logger.info(
+                '{}: find {} subtitles'.format(basename, len(subs)))
 
     def done(self):
         self.recovery_stderr()

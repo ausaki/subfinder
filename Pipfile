@@ -19,6 +19,7 @@ subfinder = {path = ".", editable = true}
 twine = "*"
 pyinstaller = "*"
 "autopep8" = "*"
+rope = "*"
 
 [packages]
 requests = "*"

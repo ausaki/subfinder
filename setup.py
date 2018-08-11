@@ -46,7 +46,7 @@ setup(
     url='https://github.com/ausaki/subfinder/',
     keywords=['subtitle', 'subfinder', 'sub', 'subtitle finder', 'shooter', 'zimuku'],
     license='MIT',
-    packages=['subfinder', 'subfinder.subsearcher'],
+    packages=['subfinder', 'subfinder.subsearcher', 'subfinder.tools'],
     include_package_data=True,
     python_requires='>=2.7',
     install_requires=requires,

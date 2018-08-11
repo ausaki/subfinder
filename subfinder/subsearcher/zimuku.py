@@ -3,7 +3,6 @@
 from __future__ import unicode_literals, print_function
 import os
 import re
-import json
 import cgi
 try:
     import urlparse
@@ -11,67 +10,8 @@ except ImportError as e:
     from urllib import parse as urlparse
 import requests
 import bs4
-import six
+from subfinder.tools.compressed_file import CompressedFile
 from .subsearcher import BaseSubSearcher
-from . import exceptions
-
-
-class ArchiveFile(object):
-    """ a simple wrapper class for ZipFile and RarFile, it's only support read.
-    """
-    EXTS = ['zip', 'rar']
-
-    def __init__(self, file):
-        self.file = file
-        self._file = None
-        _, ext = os.path.splitext(file)
-        if ext == '.zip':
-            import zipfile
-            self._file = zipfile.ZipFile(self.file, 'r')
-        else:
-            import rarfile
-            self._file = rarfile.RarFile(self.file, 'r')
-
-    @staticmethod
-    def decode_archive_file_name(name):
-        if six.PY3:
-            try:
-                name = name.encode('cp437')
-            except UnicodeEncodeError as e:
-                pass
-        if isinstance(name, six.binary_type):
-            try:
-                name = name.decode('gbk')
-            except UnicodeDecodeError as e:
-                try:
-                    name = name.decode('utf8')
-                except UnicodeDecodeError as e:
-                    pass
-        return name
-
-    @classmethod
-    def is_archivefile(cls, filename):
-        _, ext = os.path.splitext(filename)
-        ext = ext[1:]
-        return ext in cls.EXTS
-
-    def isdir(self, name):
-        info = self._file.getinfo(name)
-        try:
-            return info.isdir()
-        except:
-            return name.endswith(os.path.sep)
-
-    def namelist(self):
-        return self._file.namelist()
-
-    def extract(self, filename, dest):
-        f = self._file.open(filename, 'r')
-        with open(dest, 'wb') as fp:
-            fp.write(f.read())
-
-    def close(self):
-        self._file.close()
 
 
 class ZimukuSubSearcher(BaseSubSearcher):
@@ -448,26 +388,26 @@ class ZimukuSubSearcher(BaseSubSearcher):
             ext=ext)
 
     def _extract(self, compressed_file, videofile, subinfo):
-        if not ArchiveFile.is_archivefile(compressed_file):
+        if not CompressedFile.is_compressed_file(compressed_file):
             return [compressed_file]
 
         root = os.path.dirname(compressed_file)
         subs = []
-        af = ArchiveFile(compressed_file)
-        for name in af.namelist():
-            if af.isdir(name):
+        cf = CompressedFile(compressed_file)
+        for name in cf.namelist():
+            if cf.isdir(name):
                 continue
             # make `name` to unicode string
-            orig_name = ArchiveFile.decode_archive_file_name(name)
+            orig_name = CompressedFile.decode_file_name(name)
             _, ext = os.path.splitext(orig_name)
             ext = ext[1:]
             if ext not in subinfo['exts']:
                 continue
             subname = self._gen_subname(videofile, orig_name)
             subpath = os.path.join(root, subname)
-            af.extract(name, subpath)
+            cf.extract(name, subpath)
             subs.append(subpath)
-        af.close()
+        cf.close()
         return subs
 
     def _search_subs(self, videofile, languages, exts):
