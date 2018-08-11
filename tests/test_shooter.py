@@ -30,7 +30,7 @@ class TestShooterSubSearcher:
             assert h == self.right_hash
 
     def test_languages(self, shooter):
-        shooter._check_languages(['Chn'])
+        shooter._check_languages(['zh'])
         with pytest.raises(LanguageError):
             shooter._check_languages(['Lang'])
 
@@ -43,14 +43,12 @@ class TestShooterSubSearcher:
         monkeypatch.setattr(shooter, '_compute_video_hash',
                             lambda f: self.right_hash)
         fake_file = '/a/b/c'
-        subinfos = shooter.search_subs(
-            fake_file, languages=['Chn', 'Eng'], exts=['ass', 'srt'])
+        subinfos = shooter.search_subs(fake_file)
         assert len(subinfos) > 0
 
     def test_search_failed(self, shooter, monkeypatch):
         monkeypatch.setattr(shooter, '_compute_video_hash',
                             lambda f: 'wronghash')
         fake_file = '/a/b/c'
-        subinfos = shooter.search_subs(
-            fake_file, languages=['Chn', 'Eng'], exts=['ass', 'srt'])
+        subinfos = shooter.search_subs(fake_file)
         assert len(subinfos) == 0

@@ -85,7 +85,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         '繁體中文': 'zh_cht',
         'English字幕': 'en',
         'English': 'en',
-        'e  nglish': 'en',
+        'english': 'en',
         '双语字幕': 'zh_en',
         '双语': 'zh_en'
     }

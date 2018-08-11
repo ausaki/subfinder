@@ -11,8 +11,13 @@ class ShooterSubSearcher(BaseSubSearcher):
     """
     shortname = 'shooter'
     API_URL = 'https://www.shooter.cn/api/subapi.php'
-    SUPPORT_LANGUAGES = ['Chn', 'Eng']
+    SUPPORT_LANGUAGES = ['zh', 'en']
     SUPPORT_EXTS = ['ass', 'srt']
+
+    SHOOTER_LANGUAGES_MAP = {
+        'zh': 'Chn',
+        'en': 'Eng'
+    }
 
     def __init__(self, *args, **kwargs):
         super(ShooterSubSearcher, self).__init__(*args, **kwargs)
@@ -21,9 +26,9 @@ class ShooterSubSearcher(BaseSubSearcher):
     def search_subs(self, videofile, languages=None, exts=None):
         """
         language supports following format:
-        - "Eng"
-        - "Chn"
-        `languages` default to ["Chn"]
+        - "zh"
+        - "en"
+        `languages` default to ["zh"]
         """
         videofile = os.path.abspath(videofile)
         if languages is None:
@@ -47,7 +52,7 @@ class ShooterSubSearcher(BaseSubSearcher):
 
         result = {}
         for language in languages:
-            payload['lang'] = language
+            payload['lang'] = self.SHOOTER_LANGUAGES_MAP.get(language)
             res = self.session.post(self.API_URL, data=payload)
             if res.status_code == requests.codes.ok:
                 try:
