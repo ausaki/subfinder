@@ -15,6 +15,7 @@ import six
 from .subsearcher import BaseSubSearcher
 from . import exceptions
 
+
 class ArchiveFile(object):
     """ a simple wrapper class for ZipFile and RarFile, it's only support read.
     """
@@ -65,7 +66,7 @@ class ArchiveFile(object):
         return self._file.namelist()
 
     def extract(self, filename, dest):
-        f = self._file.open(filename, 'r') 
+        f = self._file.open(filename, 'r')
         with open(dest, 'wb') as fp:
             fp.write(f.read())
 
@@ -89,7 +90,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         '双语字幕': 'zh_en',
         '双语': 'zh_en'
     }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体', '简体&英文', '繁体&英文',]
+    COMMON_LANGUAGES = ['英文', '简体', '繁体', '简体&英文', '繁体&英文', ]
 
     API = 'https://www.zimuku.cn/search'
     SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
@@ -122,7 +123,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         - sub_title, the sub_title of video
         - resolution,
         - source,
-        - 
+        -
         - season, defaults to 0
         - episode, defaults to 0
         """
@@ -155,12 +156,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
             if info['season'] > 0 and info['episode'] > 0:
                 info['sub_title'] = videoname[last_index:s].strip('.')
             last_index = e
-        
-        m = re.search(r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.', videoname)
+
+        m = re.search(
+            r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.', videoname)
         if m:
             info['source'] = m.group('source')
 
-        m = re.search(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)', videoname)
+        m = re.search(
+            r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)', videoname)
         if m:
             info['audio_encoding'] = m.group('audio_encoding')
 
@@ -168,7 +171,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         if m:
             info['video_encoding'] = m.group('video_encoding')
         return info
-    
+
     def _parse_downloadcount(self, text):
         """ parse download count
         text format maybe:
@@ -214,9 +217,10 @@ class ZimukuSubSearcher(BaseSubSearcher):
     def _parse_sublist_html(self, doc):
         soup = bs4.BeautifulSoup(doc, 'lxml')
         subinfo_list = []
-        ele_tr_list = soup.select('div.subs > table tr.odd, div.subs > table tr.even')
+        ele_tr_list = soup.select(
+            'div.subs > table tr.odd, div.subs > table tr.even')
         if not ele_tr_list:
-            return subinfo_list 
+            return subinfo_list
         for tr in ele_tr_list:
             subinfo = {
                 'title': '',
@@ -262,10 +266,11 @@ class ZimukuSubSearcher(BaseSubSearcher):
             ele_td = tr.select('td.tac')
             if ele_td:
                 ele_td = ele_td[-1]
-                subinfo['download_count'] = self._parse_downloadcount(ele_td.get_text().strip())
+                subinfo['download_count'] = self._parse_downloadcount(
+                    ele_td.get_text().strip())
             subinfo_list.append(subinfo)
         return subinfo_list
-    
+
     def _filter_subgroup(self, subgroups):
         """ choose a best subgroup from `subgroups`
         """
@@ -278,7 +283,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         - episode
         - languages
         - exts
-        - 
+        -
         return a best matched subinfo
         """
         videoinfo = self._parse_videoname(videoname)
@@ -306,15 +311,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
             video_encoding_ = videoinfo_.get('video_encoding')
             audio_encoding_ = videoinfo_.get('audio_encoding')
             languages_ = subinfo.get('languages')
-            
 
             exts_ = subinfo.get('exts')
 
             if (season == season_ and
                 episode == episode_ and
                 set(languages_).intersection(set(languages)) and
-                set(exts_).intersection(set(exts))):
-                
+                    set(exts_).intersection(set(exts))):
+
                 filtered_subinfo_list_1.append(subinfo)
                 if resolution_ == resolution:
                     filtered_subinfo_list_2.append(subinfo)
@@ -339,7 +343,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
             return None
         # sort by download_count and rate
         sorted_subinfo_list = sorted(filtered_subinfo_list,
-                                     key=lambda item: (item['rate'], item['download_count']),
+                                     key=lambda item: (
+                                         item['rate'], item['download_count']),
                                      reverse=True)
         return sorted_subinfo_list[0]
 
@@ -349,56 +354,87 @@ class ZimukuSubSearcher(BaseSubSearcher):
         # searching subtitles
         res = self.session.get(self.API, params={'q': videoname})
         doc = res.content
-        self.visited_url.append(res.url)
+        referer = res.url
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
             return []
         subgroup = self._filter_subgroup(subgroups)
-        
+
         # get subtitles
         headers = {
-            'Referer': self.visited_url[-1]
+            'Referer': referer
         }
         res = self.session.get(self._join_url(self.API, subgroup['link']))
         doc = res.content
-        self.visited_url.append(res.url)
+        referer = res.url
+        # self.visited_url.append(res.url)
         subinfo_list = self._parse_sublist_html(doc)
-        return subinfo_list
+        return subinfo_list, referer
 
-    def _get_downloadpage_link(self, subinfo):
+    def _get_downloadpage_link(self, subinfo, referer):
         detail_link = subinfo['link']
-        l = self._join_url(self.API, detail_link)
-        self.visited_url.append(l)
-        m = re.search(r'\d+', detail_link)
+        detail_link = self._join_url(self.API, detail_link)
+        # self.visited_url.append(l)
+        m = re.search(r'(\d+)\.html', detail_link)
         if not m:
             return None
-        l = '{}.html'.format(m.group(0))
+        l = '{}.html'.format(m.group(1))
         downloadpage_link = self._join_url(self.SUBTITLE_DOWNLOAD_LINK, l)
-        return downloadpage_link
-    
-    def _get_subtitle_download_link(self, link):
-        """ get real subinfo.
-        parse the html doc of link, get the real download link of subtitles.
+        return downloadpage_link, detail_link
+
+    def _get_subtitle_download_link(self, downloadpage_link, referer):
+        """ get the real download link of subtitles.
         """
         headers = {
-            'Referer': self.visited_url[-1]
+            'Referer': referer
         }
-        res = self.session.get(link, headers=headers)
+        res = self.session.get(downloadpage_link, headers=headers)
         doc = res.content
-        self.visited_url.append(res.url)
+        referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         ele_a_list = soup.select('a.btn.btn-sm')
         if not ele_a_list:
             return None
         ele_a = ele_a_list[1]
         download_link = ele_a.get('href')
-        return download_link
-    
-    def _gen_subname(self, videofile, orig_subname, subinfo):
+        return download_link, referer
+
+    def _download_subs(self, videofile, subinfo, subtitle_download_link, referer):
+        """download archived sub
+        """
+        root = os.path.dirname(videofile)
+        name, _ = os.path.splitext(os.path.basename(videofile))
+        _, ext = os.path.splitext(subinfo['title'])
+        ext = ext[1:]
+
+        headers = {
+            'Referer': referer
+        }
+        res = self.session.get(subtitle_download_link,
+                               headers=headers, stream=True)
+        referer = res.url
+
+        # try get ext from Content-Disposition
+        content_disposition = res.headers.get('Content-Disposition')
+        _, params = cgi.parse_header(content_disposition)
+        filename = params.get('filename')
+        if filename:
+            _, ext = os.path.splitext(filename)
+            ext = ext[1:]
+
+        filename = '{}.{}'.format(name, ext)
+        filepath = os.path.join(root, filename)
+        with open(filepath, 'wb') as fp:
+            for chunk in res.iter_content(8192):
+                fp.write(chunk)
+
+        return filepath, referer
+
+    def _gen_subname(self, videofile, orig_subname):
         language = []
         try:
             for l in self.COMMON_LANGUAGES:
-                if orig_subname.find(l) >= 0:
+                if orig_subname.find('.{}.'.format(l)) >= 0:
                     language.append(l)
         except Exception:
             pass
@@ -411,58 +447,66 @@ class ZimukuSubSearcher(BaseSubSearcher):
             language=language,
             ext=ext)
 
+    def _extract(self, compressed_file, videofile, subinfo):
+        if not ArchiveFile.is_archivefile(compressed_file):
+            return [compressed_file]
 
-    def _download_subs(self, subinfo, videofile):
-        """download archived sub
-        """
-        root = os.path.dirname(videofile)
-        name, _ = os.path.splitext(os.path.basename(videofile))
-        _, ext = os.path.splitext(subinfo['title'])
-        ext = ext[1:]
-        
-        link = self._get_downloadpage_link(subinfo)
-        subtitle_download_link = self._get_subtitle_download_link(link)
-        headers = {
-            'Referer': self.visited_url[-1]
-        }
-        res = self.session.get(subtitle_download_link, headers=headers, stream=True)
-        self.visited_url.append(res.url)
+        root = os.path.dirname(compressed_file)
+        subs = []
+        af = ArchiveFile(compressed_file)
+        for name in af.namelist():
+            if af.isdir(name):
+                continue
+            # make `name` to unicode string
+            orig_name = ArchiveFile.decode_archive_file_name(name)
+            _, ext = os.path.splitext(orig_name)
+            ext = ext[1:]
+            if ext not in subinfo['exts']:
+                continue
+            subname = self._gen_subname(videofile, orig_name)
+            subpath = os.path.join(root, subname)
+            af.extract(name, subpath)
+            subs.append(subpath)
+        af.close()
+        return subs
 
-        # try get ext from Content-Disposition
-        if ext not in ArchiveFile.EXTS:
-            content_disposition = res.headers.get('Content-Disposition')
-            _, params = cgi.parse_header(content_disposition)
-            filename = params.get('filename')
-            if filename:
-                _, ext = os.path.splitext(filename)
-                ext = ext[1:]
-        
-        name = '{}.{}'.format(name, ext)
-        path = os.path.join(root, name)
-        with open(path, 'wb') as fp:
-            for chunk in res.iter_content(8192):
-                fp.write(chunk)
+    def _search_subs(self, videofile, languages, exts):
+        videoname = self._parse_videofile(videofile)  # basename, not ext
+        videoinfo = self._parse_videoname(videoname)
+        keyword = videoinfo.get('title')
+        if videoinfo['season'] != 0:
+            keyword += '.S{:02d}'.format(videoinfo['season'])
 
-        if ArchiveFile.is_archivefile(path):
-            subs = []
-            af = ArchiveFile(path)
-            for name in af.namelist():
-                if not af.isdir(name):
-                    # make `name` to unicode string
-                    orig_name = ArchiveFile.decode_archive_file_name(name)
-                    _, ext = os.path.splitext(orig_name)
-                    ext = ext[1:]
-                    if ext not in self.SUPPORT_EXTS:
-                        continue
-                        
-                    subname = self._gen_subname(videofile, orig_name, subinfo)
-                    subpath = os.path.join(root, subname)
-                    af.extract(name, subpath)
-                    subs.append(subpath)
-            af.close()
-            return subs
+         # try find subinfo_list from self._cache
+        if keyword not in self._cache:
+            subinfo_list, referer = self._get_subinfo_list(keyword)
+            self._cache[keyword] = (subinfo_list, referer)
         else:
-            return [path]
+            subinfo_list, referer = self._cache.get(keyword)
+
+        subinfo = self._filter_subinfo_list(
+            subinfo_list, videoname, languages, exts)
+        if not subinfo:
+            return []
+
+        downloadpage_link, referer = self._get_downloadpage_link(
+            subinfo, referer)
+
+        subtitle_download_link, referer = self._get_subtitle_download_link(
+            downloadpage_link, referer)
+
+        filepath, referer = self._download_subs(
+            videofile, subinfo, subtitle_download_link, referer)
+
+        subs = self._extract(filepath, videofile, subinfo)
+
+        return [{
+            'link': referer,
+            'language': subinfo['languages'],
+            'ext': subinfo['exts'],
+            'subname': subs,
+            'downloaded': True
+        }]
 
     def search_subs(self, videofile, languages=None, exts=None):
         if languages is None:
@@ -477,31 +521,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
             exts = [exts]
         self._check_exts(exts)
 
-        videoname = self._parse_videofile(videofile) # basename, not ext
-        
-        # try find subinfo_list from self._cache
-        videoinfo = self._parse_videoname(videoname)
-        keyword = videoinfo.get('title')
-        if videoinfo['season'] != 0:
-            keyword += '.S{:02d}'.format(videoinfo['season'])
-        if keyword not in self._cache:
-            subinfo_list = self._get_subinfo_list(keyword)
-            self._cache[keyword] = subinfo_list
-        else:
-            subinfo_list = self._cache.get(keyword)
-        subinfo = self._filter_subinfo_list(subinfo_list, videoname, languages, exts)
-        if not subinfo:
-            return []
-        subs = self._download_subs(subinfo, videofile)
-        return [{
-            'link': self.visited_url[-1],
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }]
-
-if __name__ == '__main__':
-    s = ZimukuSubSearcher()
-    p = os.path.expanduser('~/Downloads/test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
-    print(s.search_subs('Yellowstone.2018.S01E01.Daybreak.720p.AMZN.WEB-DL.DDP2.0.H.264-NTb.mkv'))
+        return self._search_subs(videofile, languages, exts)

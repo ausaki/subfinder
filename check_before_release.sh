@@ -28,12 +28,3 @@ echo
 echo "Start building app..."
 cd app
 ./build.sh
-
-cd $DIR
-# publish to test.pypi
-echo
-echo "Start upload subfinder to test.pypi"
-pipenv run twine upload --repository-url https://test.pypi.org/legacy/ dist/*
-
-
-
