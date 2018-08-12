@@ -42,7 +42,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         super(ZimukuSubSearcher, self).__init__(*args, **kwargs)
         self.session = requests.session()
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-        self.visited_url = []
 
     def _join_url(self, url, path):
         """ join absolute `url` and `path`(href)
@@ -307,14 +306,12 @@ class ZimukuSubSearcher(BaseSubSearcher):
         res = self.session.get(self._join_url(self.API, subgroup['link']))
         doc = res.content
         referer = res.url
-        # self.visited_url.append(res.url)
         subinfo_list = self._parse_sublist_html(doc)
         return subinfo_list, referer
 
     def _get_downloadpage_link(self, subinfo, referer):
         detail_link = subinfo['link']
         detail_link = self._join_url(self.API, detail_link)
-        # self.visited_url.append(l)
         m = re.search(r'(\d+)\.html', detail_link)
         if not m:
             return None
