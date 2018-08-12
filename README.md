@@ -6,11 +6,34 @@ subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 
 [![PyPi](https://img.shields.io/pypi/v/subfinder.svg)](https://pypi.org/project/subfinder/)
 [![PyPi - Python Version](https://img.shields.io/pypi/pyversions/subfinder.svg)](https://pypi.org/project/subfinder/)
-[![PyPI - License](https://img.shields.io/pypi/l/python-validator.svg)](https://pypi.org/project/python-validator/)
+[![PyPI - License](https://img.shields.io/pypi/l/subfinder.svg)](https://pypi.org/project/subfinder/)
 ![GitHub last commit](https://img.shields.io/github/last-commit/ausaki/subfinder.svg)
 
 ---
-[TOC]
+
+Table of Contents
+=================
+
+* [subfinder 字幕查找器](#subfinder-字幕查找器)
+  * [特性](#特性)
+  * [安装](#安装)
+  * [更新](#更新)
+  * [使用方法](#使用方法)
+      * [命令行](#命令行)
+      * [Windows 右键菜单](#windows-右键菜单)
+      * [macOS 右键菜单](#macos-右键菜单)
+  * [图形界面](#图形界面)
+  * [注意事项](#注意事项)
+  * [扩展](#扩展)
+      * [subfinder 架构](#subfinder-架构)
+      * [自定义字幕搜索器](#自定义字幕搜索器)
+  * [贡献](#贡献)
+  * [参考](#参考)
+  * [License](#license)
+  * [更新历史](#更新历史)
+      * [v1.0.2](#v102)
+      * [v1.0.1](#v101)
+
 ---
 ## 特性
 
