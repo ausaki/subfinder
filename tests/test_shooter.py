@@ -3,13 +3,14 @@
 from __future__ import unicode_literals, print_function
 import os
 import pytest
-from subfinder.subsearcher.shooter import ShooterSubSearcher
+from subfinder.subsearcher import ShooterSubSearcher
+from subfinder.subfinder import SubFinder
 from subfinder.subsearcher.exceptions import LanguageError, ExtError, ShooterAPIError
 
 
 @pytest.fixture(scope='module')
 def shooter():
-    s = ShooterSubSearcher()
+    s = ShooterSubSearcher(SubFinder())
     return s
 
 

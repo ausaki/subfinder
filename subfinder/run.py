@@ -1,4 +1,6 @@
 # -*- coding: utf8 -*-
+""" 命令行入口
+"""
 from __future__ import unicode_literals, print_function
 import sys
 import time

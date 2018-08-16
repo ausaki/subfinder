@@ -1,15 +1,13 @@
 # -*- coding: utf8 -*-
-
 from __future__ import unicode_literals, print_function
 import os
 import re
-import cgi
 import bs4
 from .subsearcher import BaseSubSearcher
 
 
 class ZimukuSubSearcher(BaseSubSearcher):
-    """ a SubSearcher searching subtitles by zimuku(https://www.zimuku.cn/)
+    """ zimuku 字幕搜索器(https://www.zimuku.cn/)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
@@ -178,17 +176,16 @@ class ZimukuSubSearcher(BaseSubSearcher):
         subinfo_list = self._parse_sublist_html(doc)
         return subinfo_list, referer
 
-    def _get_downloadpage_link(self, subinfo, referer):
-        detail_link = subinfo['link']
-        detail_link = self._join_url(self.API, detail_link)
-        m = re.search(r'(\d+)\.html', detail_link)
+    def _visit_detailpage(self, detailpage_link, referer):
+        detailpage_link = self._join_url(self.API, detailpage_link)
+        m = re.search(r'(\d+)\.html', detailpage_link)
         if not m:
             return None
         l = '{}.html'.format(m.group(1))
         downloadpage_link = self._join_url(self.SUBTITLE_DOWNLOAD_LINK, l)
-        return downloadpage_link, detail_link
+        return downloadpage_link, detailpage_link
 
-    def _get_subtitle_download_link(self, downloadpage_link, referer):
+    def _visit_downloadpage(self, downloadpage_link, referer):
         """ get the real download link of subtitles.
         """
         headers = {
@@ -227,16 +224,17 @@ class ZimukuSubSearcher(BaseSubSearcher):
 
         subinfo = self._filter_subinfo_list(
             subinfo_list, videoinfo, languages, exts)
-        if not subinfo:
-            return []
 
         if self.debug:
             self._debug('subinfo: {}'.format(subinfo))
 
-        downloadpage_link, referer = self._get_downloadpage_link(
-            subinfo, referer)
+        if not subinfo:
+            return []
+            
+        downloadpage_link, referer = self._visit_detailpage(
+            subinfo['link'], referer)
 
-        subtitle_download_link, referer = self._get_subtitle_download_link(
+        subtitle_download_link, referer = self._visit_downloadpage(
             downloadpage_link, referer)
 
         filepath, referer = self._download_subs(

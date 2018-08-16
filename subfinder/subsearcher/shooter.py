@@ -19,10 +19,6 @@ class ShooterSubSearcher(BaseSubSearcher):
         'en': 'Eng'
     }
 
-    def __init__(self, *args, **kwargs):
-        super(ShooterSubSearcher, self).__init__(*args, **kwargs)
-        self.session = requests.Session()
-    
     def _search_subs(self, videofile, languages, exts):
         filehash = self._compute_video_hash(videofile)
         root, basename = os.path.split(videofile)

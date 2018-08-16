@@ -1,4 +1,7 @@
 # -*- coding: utf8 -*-
+""" SubFinder的多线程版本
+"""
+
 from __future__ import unicode_literals
 from .subfinder import SubFinder
 try:
@@ -8,7 +11,8 @@ except ImportError as e:
 from threading import Thread, Lock
 
 class Pool(object):
-    
+    """ 线程池
+    """
     def __init__(self, size):
         self.size = size
         self.queue = Queue(maxsize=size)

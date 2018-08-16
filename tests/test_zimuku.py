@@ -4,13 +4,15 @@
 from __future__ import unicode_literals, print_function
 import os
 import pytest
-from subfinder.subsearcher.zimuku import ZimukuSubSearcher
+from subfinder.subsearcher import ZimukuSubSearcher
+from subfinder.subfinder import SubFinder
 from subfinder.subsearcher.exceptions import LanguageError, ExtError
 
 
 @pytest.fixture(scope='module')
 def zimuku():
-    z = ZimukuSubSearcher()
+    s = SubFinder()
+    z = ZimukuSubSearcher(s)
     return z
 
 
@@ -24,44 +26,6 @@ def test_exts(zimuku):
     zimuku._check_exts(['ass'])
     with pytest.raises(ExtError):
         zimuku._check_exts(['Ext'])
-
-
-def test_parse_videoname(zimuku):
-    test_cases = {
-        'TV_TITLE.720p.HDTV.x264-AVS': {
-            'title': 'TV_TITLE',
-            'season': 0,
-            'episode': 0,
-            'sub_title': '',
-            'resolution': '720p',
-            'source': 'HDTV',
-            'video_encoding': 'x264',
-            'audio_encoding': ''
-        },
-        'TV_TITLE.S01E01.SUB_TITLE.720p.HDTV.AC3.5.1.x264-AVS': {
-            'title': 'TV_TITLE',
-            'season': 1,
-            'episode': 1,
-            'sub_title': 'SUB_TITLE',
-            'resolution': '720p',
-            'source': 'HDTV',
-            'video_encoding': 'x264',
-            'audio_encoding': 'AC3.5.1'
-        },
-        'TV_TITLE.S10E10.SUB_TITLE.1080P.WEB-DL.AC3.5.1.x264-AVS': {
-            'title': 'TV_TITLE',
-            'season': 10,
-            'episode': 10,
-            'sub_title': 'SUB_TITLE',
-            'resolution': '1080P',
-            'source': 'WEB-DL',
-            'video_encoding': 'x264',
-            'audio_encoding': 'AC3.5.1'
-        },
-    }
-    for name, info in test_cases.items():
-        info_ = zimuku._parse_videoname(name)
-        assert info == info_
 
 
 def test_parse_download_count(zimuku):

@@ -4,14 +4,14 @@ import os
 import sys
 import logging
 import mimetypes
-import time
-import json
-import sqlite3
+import traceback
 import requests
 from .subsearcher import get_subsearcher, exceptions
 
 
 class Pool(object):
+    """ 模拟线程池，实际上还是同步执行代码
+    """
     def __init__(self, size):
         self.size = size
 
@@ -23,7 +23,7 @@ class Pool(object):
 
 
 class SubFinder(object):
-    """ find subtitles and download subtitles
+    """ 字幕查找器
     """
 
     VIDEO_EXTS = ['.mkv', '.mp4', '.ts', '.avi', '.wmv']
@@ -37,7 +37,8 @@ class SubFinder(object):
         self.silence = kwargs.get('silence', False)
         # logger's output
         self.logger_output = kwargs.get('logger_output', sys.stdout)
-
+        # debug
+        self.debug = kwargs.get('debug', False)
         self._init_session()
         self._init_pool()
         self._init_logger()
@@ -50,10 +51,10 @@ class SubFinder(object):
         if not isinstance(subsearcher_class, list):
             subsearcher_class = [subsearcher_class]
 
-        self.subsearcher = [sc(self) for sc in subsearcher_class]
+        self.subsearcher = [sc(self, self.debug) for sc in subsearcher_class]
 
     def _is_videofile(self, f):
-        """ determine `f` is a valid video file
+        """ 判断 f 是否是视频文件
         """
         if os.path.isfile(f):
             types = mimetypes.guess_type(f)
@@ -63,7 +64,7 @@ class SubFinder(object):
         return False
 
     def _filter_path(self, path):
-        """ filter path recursively, return a list of videofile
+        """ 筛选出 path 目录下所有的视频文件
         """
         if self._is_videofile(path):
             return [path, ]
@@ -78,7 +79,7 @@ class SubFinder(object):
             return []
 
     def _init_session(self):
-        """ init request session, for download subtitles
+        """ 初始化 requests.Session
         """
         self.session = requests.Session()
         self.session.mount('http://', adapter=requests.adapters.HTTPAdapter(
@@ -113,22 +114,27 @@ class SubFinder(object):
         sys.stderr = self._old_stderr
 
     def _download(self, videofile):
+        """ 调用 SubSearcher 搜索并下载字幕
+        """
         basename = os.path.basename(videofile)
 
         subinfos = []
         for subsearcher in self.subsearcher:
             self.logger.info(
-                'Start search subtitles of {} by {}'.format(basename, subsearcher))
+                '{0}：开始使用 {1} 搜索字幕'.format(basename, subsearcher))
             try:
                 subinfos = subsearcher.search_subs(
                     videofile, self.languages, self.exts)
             except Exception as e:
+                err = str(e)
+                if self.debug:
+                    err = traceback.format_exc()
                 self.logger.error(
-                    'search subinfo of {} happening error: {}'.format(basename, str(e)))
+                    '{}：搜索字幕发生错误： {}'.format(basename, err))
                 continue
             if subinfos:
                 break
-        self.logger.info('Find {} subtitles for {}, prepare to download'.format(
+        self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format(
             len(subinfos), basename))
         try:
             for subinfo in subinfos:
@@ -155,25 +161,27 @@ class SubFinder(object):
         self.path = path
 
     def start(self):
-        self.logger.info('Start')
+        """ SubFinder 入口，开始函数
+        """
+        self.logger.info('开始')
         videofiles = self._filter_path(self.path)
         l = len(videofiles)
         if l == 0:
             self.logger.info(
-                "Doesn't find any video files in {}".format(self.path))
+                '在 {} 下没有发现视频文件'.format(self.path))
             return
         else:
-            self.logger.info('Find {} video files'.format(l))
+            self.logger.info('找到 {} 个视频文件'.format(l))
 
         for f in videofiles:
             self._history[f] = []
             self.pool.spawn(self._download, f)
         self.pool.join()
-        self.logger.info('='*20 + 'Done! enjoying the movies!' + '='*20)
+        self.logger.info('='*20 + '下载完成' + '='*20)
         for v, subs in self._history.items():
             basename = os.path.basename(v)
             self.logger.info(
-                '{}: find {} subtitles'.format(basename, len(subs)))
+                '{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
         self.recovery_stderr()

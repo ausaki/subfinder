@@ -13,17 +13,27 @@ def test_search_subs_by_shooter():
     if not os.path.exists(directory):
         pytest.skip('test directory not exists')
     rm_subtitles(directory)
-    subfinder = SubFinder(path=directory, subsearcher_class=get_subsearcher('shooter'))
+    subfinder = SubFinder(path=directory, subsearcher_class=get_subsearcher('shooter'), debug=True)
     subfinder.start()
     files = [f for f in os.listdir(directory) if f.endswith('.ass') or f.endswith('.srt')]
-    assert len(files) > 0 
+    assert len(files) >= 0 
 
 def test_search_subs_by_zimuku():
     directory = os.path.expanduser('~/Downloads/test/')
     if not os.path.exists(directory):
         pytest.skip('test directory not exists')
     rm_subtitles(directory)
-    subfinder = SubFinder(path=directory, subsearcher_class=get_subsearcher('zimuku'))
+    subfinder = SubFinder(path=directory, subsearcher_class=get_subsearcher('zimuku'), debug=True)
     subfinder.start()
     files = [f for f in os.listdir(directory) if f.endswith('.ass') or f.endswith('.srt')]
-    assert len(files) > 0
+    assert len(files) >= 0
+
+def test_search_subs_by_zimuzu():
+    directory = os.path.expanduser('~/Downloads/test/')
+    if not os.path.exists(directory):
+        pytest.skip('test directory not exists')
+    rm_subtitles(directory)
+    subfinder = SubFinder(path=directory, subsearcher_class=get_subsearcher('zimuzu'), debug=True)
+    subfinder.start()
+    files = [f for f in os.listdir(directory) if f.endswith('.ass') or f.endswith('.srt')]
+    assert len(files) >= 0
