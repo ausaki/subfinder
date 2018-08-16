@@ -22,27 +22,8 @@ class ShooterSubSearcher(BaseSubSearcher):
     def __init__(self, *args, **kwargs):
         super(ShooterSubSearcher, self).__init__(*args, **kwargs)
         self.session = requests.Session()
-
-    def search_subs(self, videofile, languages=None, exts=None):
-        """
-        language supports following format:
-        - "zh"
-        - "en"
-        `languages` default to ["zh"]
-        """
-        videofile = os.path.abspath(videofile)
-        if languages is None:
-            languages = [self.SUPPORT_LANGUAGES[0]]
-        elif isinstance(languages, str):
-            languages = [languages]
-        self._check_languages(languages)
-
-        if exts is None:
-            exts = self.SUPPORT_EXTS
-        elif isinstance(exts, str):
-            exts = [exts]
-        self._check_exts(exts)
-
+    
+    def _search_subs(self, videofile, languages, exts):
         filehash = self._compute_video_hash(videofile)
         root, basename = os.path.split(videofile)
         payload = {'filehash': filehash,

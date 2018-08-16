@@ -33,13 +33,6 @@ class SubFinder(object):
         self.languages = languages
         self.exts = exts
 
-        if subsearcher_class is None:
-            subsearcher_class = get_subsearcher('default')
-        if not isinstance(subsearcher_class, list):
-            subsearcher_class = [subsearcher_class]
-
-        self.subsearcher = [sc() for sc in subsearcher_class]
-
         # silence: dont print anything
         self.silence = kwargs.get('silence', False)
         # logger's output
@@ -51,6 +44,13 @@ class SubFinder(object):
 
         # _history: recoding downloading history
         self._history = {}
+
+        if subsearcher_class is None:
+            subsearcher_class = get_subsearcher('default')
+        if not isinstance(subsearcher_class, list):
+            subsearcher_class = [subsearcher_class]
+
+        self.subsearcher = [sc(self) for sc in subsearcher_class]
 
     def _is_videofile(self, f):
         """ determine `f` is a valid video file

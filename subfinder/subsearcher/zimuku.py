@@ -4,13 +4,7 @@ from __future__ import unicode_literals, print_function
 import os
 import re
 import cgi
-try:
-    import urlparse
-except ImportError as e:
-    from urllib import parse as urlparse
-import requests
 import bs4
-from subfinder.tools.compressed_file import CompressedFile
 from .subsearcher import BaseSubSearcher
 
 
@@ -30,7 +24,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         '双语字幕': 'zh_en',
         '双语': 'zh_en'
     }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体', '简体&英文', '繁体&英文', ]
+    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API = 'https://www.zimuku.cn/search'
     SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
@@ -38,78 +32,24 @@ class ZimukuSubSearcher(BaseSubSearcher):
     _cache = {}
     shortname = 'zimuku'
 
-    def __init__(self, *args, **kwargs):
-        super(ZimukuSubSearcher, self).__init__(*args, **kwargs)
-        self.session = requests.session()
-        self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-
-    def _join_url(self, url, path):
-        """ join absolute `url` and `path`(href)
-        """
-        return urlparse.urljoin(url, path)
-
-    def _parse_videofile(self, videofile):
-        """ parse the `videofile` and return it's basename
-        """
-        name = os.path.basename(videofile)
-        name = os.path.splitext(name)[0]
-        return name
-
-    def _parse_videoname(self, videoname):
-        """ parse videoname and return video info dict
-        video info contains:
-        - title, the name of video
-        - sub_title, the sub_title of video
-        - resolution,
-        - source,
-        -
-        - season, defaults to 0
-        - episode, defaults to 0
-        """
-        info = {
-            'title': '',
-            'season': 0,
-            'episode': 0,
-            'sub_title': '',
-            'resolution': '',
-            'source': '',
-            'audio_encoding': '',
-            'video_encoding': '',
-        }
-        last_index = 0
-        m = re.search(r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)', videoname)
-        if m:
-            info['season'] = int(m.group('season'))
-            info['episode'] = int(m.group('episode'))
-            s, e = m.span()
-            info['title'] = videoname[0:s].strip('.')
-            last_index = e
-
-        m = re.search(r'(?P<resolution>720[Pp]|1080[Pp]|HR)', videoname)
-        if m:
-            info['resolution'] = m.group('resolution')
-            s, e = m.span()
-            if info['title'] == '':
-                info['title'] = videoname[0:s].strip('.')
-
-            if info['season'] > 0 and info['episode'] > 0:
-                info['sub_title'] = videoname[last_index:s].strip('.')
-            last_index = e
-
-        m = re.search(
-            r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.', videoname)
-        if m:
-            info['source'] = m.group('source')
-
-        m = re.search(
-            r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)', videoname)
-        if m:
-            info['audio_encoding'] = m.group('audio_encoding')
-
-        m = re.search(r'(?P<video_encoding>x264|H264|AVC1|H.265)', videoname)
-        if m:
-            info['video_encoding'] = m.group('video_encoding')
-        return info
+    @classmethod
+    def _gen_subname(cls, videofile, language, ext, **kwargs):
+        language = []
+        orig_subname = kwargs.get('orig_name')
+        try:
+            for l in cls.COMMON_LANGUAGES:
+                if orig_subname.find(l) >= 0:
+                    language.append(l)
+        except Exception:
+            pass
+        language = '.'.join(language)
+        basename = os.path.basename(videofile)
+        basename, _ = os.path.splitext(basename)
+        _, ext = os.path.splitext(orig_subname)
+        return '{basename}.{language}{ext}'.format(
+            basename=basename,
+            language=language,
+            ext=ext)
 
     def _parse_downloadcount(self, text):
         """ parse download count
@@ -216,77 +156,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
         subgroup = subgroups[0] if subgroups else None
         return subgroup
 
-    def _filter_subinfo_list(self, subinfo_list, videoname, languages, exts):
-        """ filter subinfo list base on:
-        - season
-        - episode
-        - languages
-        - exts
-        -
-        return a best matched subinfo
-        """
-        videoinfo = self._parse_videoname(videoname)
-        season = videoinfo.get('season')
-        episode = videoinfo.get('episode')
-        resolution = videoinfo.get('resolution')
-        source = videoinfo.get('source')
-        video_encoding = videoinfo.get('video_encoding')
-        audio_encoding = videoinfo.get('audio_encoding')
-
-        filtered_subinfo_list_1 = []
-        filtered_subinfo_list_2 = []
-        filtered_subinfo_list_3 = []
-        filtered_subinfo_list_4 = []
-        filtered_subinfo_list_5 = []
-        filtered_subinfo_list = []
-
-        for subinfo in subinfo_list:
-            title = subinfo.get('title')
-            videoinfo_ = self._parse_videoname(title)
-            season_ = videoinfo_.get('season')
-            episode_ = videoinfo_.get('episode')
-            resolution_ = videoinfo_.get('resolution')
-            source_ = videoinfo_.get('source')
-            video_encoding_ = videoinfo_.get('video_encoding')
-            audio_encoding_ = videoinfo_.get('audio_encoding')
-            languages_ = subinfo.get('languages')
-
-            exts_ = subinfo.get('exts')
-
-            if (season == season_ and
-                episode == episode_ and
-                set(languages_).intersection(set(languages)) and
-                    set(exts_).intersection(set(exts))):
-
-                filtered_subinfo_list_1.append(subinfo)
-                if resolution_ == resolution:
-                    filtered_subinfo_list_2.append(subinfo)
-                    if source_ == source:
-                        filtered_subinfo_list_3.append(subinfo)
-                        if video_encoding_ == video_encoding:
-                            filtered_subinfo_list_4.append(subinfo)
-                            if audio_encoding_ == audio_encoding:
-                                filtered_subinfo_list_5.append(subinfo)
-        if filtered_subinfo_list_5:
-            filtered_subinfo_list = filtered_subinfo_list_5
-        elif filtered_subinfo_list_4:
-            filtered_subinfo_list = filtered_subinfo_list_4
-        elif filtered_subinfo_list_3:
-            filtered_subinfo_list = filtered_subinfo_list_3
-        elif filtered_subinfo_list_2:
-            filtered_subinfo_list = filtered_subinfo_list_2
-        elif filtered_subinfo_list_1:
-            filtered_subinfo_list = filtered_subinfo_list_1
-
-        if not filtered_subinfo_list:
-            return None
-        # sort by download_count and rate
-        sorted_subinfo_list = sorted(filtered_subinfo_list,
-                                     key=lambda item: (
-                                         item['rate'], item['download_count']),
-                                     reverse=True)
-        return sorted_subinfo_list[0]
-
     def _get_subinfo_list(self, videoname):
         """ return subinfo_list of videoname
         """
@@ -336,83 +205,15 @@ class ZimukuSubSearcher(BaseSubSearcher):
         download_link = ele_a.get('href')
         return download_link, referer
 
-    def _download_subs(self, videofile, subinfo, subtitle_download_link, referer):
-        """download archived sub
-        """
-        root = os.path.dirname(videofile)
-        name, _ = os.path.splitext(os.path.basename(videofile))
-        _, ext = os.path.splitext(subinfo['title'])
-        ext = ext[1:]
-
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(subtitle_download_link,
-                               headers=headers, stream=True)
-        referer = res.url
-
-        # try get ext from Content-Disposition
-        content_disposition = res.headers.get('Content-Disposition')
-        _, params = cgi.parse_header(content_disposition)
-        filename = params.get('filename')
-        if filename:
-            _, ext = os.path.splitext(filename)
-            ext = ext[1:]
-
-        filename = '{}.{}'.format(name, ext)
-        filepath = os.path.join(root, filename)
-        with open(filepath, 'wb') as fp:
-            for chunk in res.iter_content(8192):
-                fp.write(chunk)
-
-        return filepath, referer
-
-    def _gen_subname(self, videofile, orig_subname):
-        language = []
-        try:
-            for l in self.COMMON_LANGUAGES:
-                if orig_subname.find('.{}.'.format(l)) >= 0:
-                    language.append(l)
-        except Exception:
-            pass
-        language = '.'.join(language)
-        basename = os.path.basename(videofile)
-        basename, _ = os.path.splitext(basename)
-        _, ext = os.path.splitext(orig_subname)
-        return '{basename}.{language}{ext}'.format(
-            basename=basename,
-            language=language,
-            ext=ext)
-
-    def _extract(self, compressed_file, videofile, subinfo):
-        if not CompressedFile.is_compressed_file(compressed_file):
-            return [compressed_file]
-
-        root = os.path.dirname(compressed_file)
-        subs = []
-        cf = CompressedFile(compressed_file)
-        for name in cf.namelist():
-            if cf.isdir(name):
-                continue
-            # make `name` to unicode string
-            orig_name = CompressedFile.decode_file_name(name)
-            _, ext = os.path.splitext(orig_name)
-            ext = ext[1:]
-            if ext not in subinfo['exts']:
-                continue
-            subname = self._gen_subname(videofile, orig_name)
-            subpath = os.path.join(root, subname)
-            cf.extract(name, subpath)
-            subs.append(subpath)
-        cf.close()
-        return subs
-
     def _search_subs(self, videofile, languages, exts):
-        videoname = self._parse_videofile(videofile)  # basename, not ext
+        videoname = self._get_videoname(videofile)  # basename, not ext
         videoinfo = self._parse_videoname(videoname)
         keyword = videoinfo.get('title')
         if videoinfo['season'] != 0:
             keyword += '.S{:02d}'.format(videoinfo['season'])
+
+        if self.debug:
+            self._debug('videoinfo: {}'.format(videoinfo))
 
          # try find subinfo_list from self._cache
         if keyword not in self._cache:
@@ -421,10 +222,16 @@ class ZimukuSubSearcher(BaseSubSearcher):
         else:
             subinfo_list, referer = self._cache.get(keyword)
 
+        if self.debug:
+            self._debug('subinfo_list: {}'.format(subinfo_list))
+
         subinfo = self._filter_subinfo_list(
-            subinfo_list, videoname, languages, exts)
+            subinfo_list, videoinfo, languages, exts)
         if not subinfo:
             return []
+
+        if self.debug:
+            self._debug('subinfo: {}'.format(subinfo))
 
         downloadpage_link, referer = self._get_downloadpage_link(
             subinfo, referer)
@@ -433,9 +240,15 @@ class ZimukuSubSearcher(BaseSubSearcher):
             downloadpage_link, referer)
 
         filepath, referer = self._download_subs(
-            videofile, subinfo, subtitle_download_link, referer)
+            subtitle_download_link, videofile, referer, subinfo['title'])
 
-        subs = self._extract(filepath, videofile, subinfo)
+        if self.debug:
+            self._debug('filepath: {}'.format(filepath))
+
+        subs = self._extract(filepath, videofile, exts)
+
+        if self.debug:
+            self._debug('subs: {}'.format(subs))
 
         return [{
             'link': referer,
@@ -444,18 +257,3 @@ class ZimukuSubSearcher(BaseSubSearcher):
             'subname': subs,
             'downloaded': True
         }]
-
-    def search_subs(self, videofile, languages=None, exts=None):
-        if languages is None:
-            languages = [self.SUPPORT_LANGUAGES[0]]
-        elif isinstance(languages, str):
-            languages = [languages]
-        self._check_languages(languages)
-
-        if exts is None:
-            exts = self.SUPPORT_EXTS
-        elif isinstance(exts, str):
-            exts = [exts]
-        self._check_exts(exts)
-
-        return self._search_subs(videofile, languages, exts)
