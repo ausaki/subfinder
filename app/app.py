@@ -74,7 +74,11 @@ class Application(tk.Frame, object):
             subfinder.start()
             subfinder.done()
 
-        subsearchers = [get_subsearcher('shooter'), get_subsearcher('zimuku')]
+        subsearchers = [
+            get_subsearcher('shooter'), 
+            get_subsearcher('zimuku'),
+            get_subsearcher('zimuzu')
+        ]
         t = Thread(target=start, args=[self.videofile, ], kwargs=dict(
             logger_output=self._output, subsearcher_class=subsearchers))
         t.start()
