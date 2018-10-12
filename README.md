@@ -34,6 +34,7 @@ Table of Contents
       * [参考](#参考)
       * [License](#license)
       * [更新历史](#更新历史)
+         * [v1.0.5](#v105)
          * [v1.0.4](#v104)
          * [v1.0.3](#v103)
          * [v1.0.2](#v102)
@@ -121,6 +122,7 @@ Table of Contents
 | ---------- | ----------------------------------- | -------------- |
 | shooter    | ['zh', 'en']                        | ['ass', 'srt'] |
 | zimuku     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
+| zimuzu     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 
 语言代码：
 
@@ -313,6 +315,10 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 [MIT License](LICENSE)
 
 ## 更新历史
+
+### v1.0.5
+
+- 修复命令行参数`-l`，`-e`的问题。
 
 ### v1.0.4
 
