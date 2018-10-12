@@ -6,7 +6,7 @@ import sys
 import time
 import argparse
 import six
-from .subsearcher import get_subsearcher, get_all_subsearchers
+from .subsearcher import get_subsearcher, get_all_subsearchers, BaseSubSearcher
 from .subfinder import SubFinder
 from . import __version__
 
@@ -69,12 +69,7 @@ def run(subfinder_class):
                         help="show subfinder's version")
 
     args = parser.parse_args()
-
-    if args.languages:
-        args.method._check_languages(args.languages)
-    if args.exts:
-        args.method._check_exts(args.exts)
-
+    
     # try to make `path` to unicode string in python2
     if six.PY2 and isinstance(args.path, six.binary_type):
         args.path = args.path.decode(sys.getfilesystemencoding())

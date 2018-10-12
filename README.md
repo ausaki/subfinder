@@ -121,6 +121,7 @@ Table of Contents
 | ---------- | ----------------------------------- | -------------- |
 | shooter    | ['zh', 'en']                        | ['ass', 'srt'] |
 | zimuku     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
+| zimuzu     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 
 语言代码：
 
