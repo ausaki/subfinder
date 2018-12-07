@@ -34,6 +34,7 @@ Table of Contents
       * [参考](#参考)
       * [License](#license)
       * [更新历史](#更新历史)
+         * [v1.0.7](#v107)
          * [v1.0.6](#v106)
          * [v1.0.5](#v105)
          * [v1.0.4](#v104)
@@ -317,7 +318,11 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 ## 更新历史
 
-### v1.0.5
+### v1.0.7
+
+- 升级 requests 至 2.20.0，修复 requests [安全问题](https://nvd.nist.gov/vuln/detail/CVE-2018-18074)，
+
+### v1.0.6
 
 - 优化了 subsearcher。
 
