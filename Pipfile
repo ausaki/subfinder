@@ -22,7 +22,7 @@ pyinstaller = "*"
 rope = "*"
 
 [packages]
-requests = "*"
+requests = ">=2.20.0"
 lxml = "*"
 "bs4" = "*"
 gevent = "*"
