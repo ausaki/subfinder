@@ -118,7 +118,7 @@ class BaseSubSearcher(object):
         - episode, defaults to 0
         """
         info = {
-            'title': videoname,
+            'title': '',
             'season': 0,
             'episode': 0,
             'sub_title': '',
@@ -146,6 +146,9 @@ class BaseSubSearcher(object):
             if info['season'] > 0 and info['episode'] > 0:
                 info['sub_title'] = videoname[last_index:s].strip('.')
             last_index = e
+
+        if info['title'] == '':
+            info['title'] = videoname
 
         m = cls.RE_SOURCE.search(videoname)
         if m:
