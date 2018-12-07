@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['app.py'],
-             pathex=['../', '/Users/jiaminlu/git_repository/subfinder/app'],
+             pathex=['../', 'D:\\Workspace\\GitReposit\\subfinder\\app'],
              binaries=[],
              datas=[],
              hiddenimports=[],

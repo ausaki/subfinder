@@ -56,14 +56,13 @@ class BaseSubSearcher(object):
     SUPPORT_LANGUAGES = []
     SUPPORT_EXTS = []
 
-    def __init__(self, subfinder, debug=False, **kwargs):
+    def __init__(self, subfinder,  **kwargs):
         """
         subfinder: SubFinder
         debug: 是否输出调试信息
         """
         self.session = requests.session()
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
-        self.debug = debug
         self.subfinder = subfinder
 
     def _debug(self, msg):
@@ -119,7 +118,7 @@ class BaseSubSearcher(object):
         - episode, defaults to 0
         """
         info = {
-            'title': '',
+            'title': videoname,
             'season': 0,
             'episode': 0,
             'sub_title': '',
