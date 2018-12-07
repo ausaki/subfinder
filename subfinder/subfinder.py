@@ -51,7 +51,7 @@ class SubFinder(object):
         if not isinstance(subsearcher_class, list):
             subsearcher_class = [subsearcher_class]
 
-        self.subsearcher = [sc(self, self.debug) for sc in subsearcher_class]
+        self.subsearcher = [sc(self) for sc in subsearcher_class]
 
     def _is_videofile(self, f):
         """ 判断 f 是否是视频文件
@@ -90,28 +90,20 @@ class SubFinder(object):
         self.pool = Pool(10)
 
     def _init_logger(self):
-        self._devnull = open(os.devnull, 'w')
-        self._old_stderr = sys.stderr
-
+        log_level = logging.INFO
         if self.silence:
-            sys.stderr = self._devnull
-
+            log_level = logging.CRITICAL + 1
+        if self.debug:
+            log_level = logging.DEBUG
         self.logger = logging.getLogger('SubFinder')
         self.logger.handlers = []
-        self.logger.setLevel(logging.DEBUG)
-        s = self.logger_output
-        if self.silence:
-            s = self._devnull
-        sh = logging.StreamHandler(stream=s)
-        sh.setLevel(logging.DEBUG)
+        self.logger.setLevel(log_level)
+        sh = logging.StreamHandler(stream=self.logger_output)
+        sh.setLevel(log_level)
         formatter = logging.Formatter(
             '[%(asctime)s]-[%(levelname)s]: %(message)s', datefmt='%m/%d %H:%M:%S')
         sh.setFormatter(formatter)
         self.logger.addHandler(sh)
-
-    def recovery_stderr(self):
-        self._devnull.close()
-        sys.stderr = self._old_stderr
 
     def _download(self, videofile):
         """ 调用 SubSearcher 搜索并下载字幕
@@ -184,4 +176,4 @@ class SubFinder(object):
                 '{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
-        self.recovery_stderr()
+       pass

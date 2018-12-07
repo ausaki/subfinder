@@ -67,6 +67,9 @@ def run(subfinder_class):
     parser.add_argument('-v', '--version',
                         action='version', version='subfinder {v}'.format(v=__version__),
                         help="show subfinder's version")
+    parser.add_argument('--debug',
+                        action='store_true', default=False,
+                        help="print debug infomation, default to False")
 
     args = parser.parse_args()
     
@@ -78,7 +81,8 @@ def run(subfinder_class):
                                 languages=args.languages,
                                 exts=args.exts,
                                 subsearcher_class=args.method,
-                                silence=args.silence)
+                                silence=args.silence,
+                                debug=args.debug)
     subfinder.start()
     subfinder.done()
 

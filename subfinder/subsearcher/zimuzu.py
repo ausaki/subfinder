@@ -36,7 +36,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
                     language.append(l)
         except Exception:
             pass
-        language = '.'.join(language)
+        language = '&'.join(language)
         basename = os.path.basename(videofile)
         basename, _ = os.path.splitext(basename)
         _, ext = os.path.splitext(orig_subname)
@@ -181,8 +181,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         videoinfo = self._parse_videoname(videoname)
         keyword = self._get_keyword(videoinfo)
 
-        if self.debug:
-            self._debug('videoinfo: {}'.format(videoinfo))
+        self._debug('videoinfo: {}'.format(videoinfo))
 
         # try find subinfo_list from self._cache
         if keyword not in self._cache:
@@ -191,15 +190,13 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         else:
             subinfo_list, referer = self._cache.get(keyword)
 
-        if self.debug:
-            self._debug('subinfo_list: {}'.format(subinfo_list))
+        self._debug('subinfo_list: {}'.format(subinfo_list))
 
         # 初步过滤掉无关的字幕
         subinfo_list = self._first_filter_subinfo_list(
             subinfo_list, videoinfo, languages)
 
-        if self.debug:
-            self._debug('subinfo_list: {}'.format(subinfo_list))
+        self._debug('subinfo_list: {}'.format(subinfo_list))
 
         # 补全字幕信息中的 exts 字段
         for subinfo in subinfo_list:
@@ -210,8 +207,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         subinfo = self._filter_subinfo_list(
             subinfo_list, videoinfo, languages, exts)
         
-        if self.debug:
-            self._debug('subinfo: {}'.format(subinfo))
+        self._debug('subinfo: {}'.format(subinfo))
 
         if not subinfo:
             return []
@@ -225,13 +221,11 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         filepath, referer = self._download_subs(
             download_link, videofile, referer, subinfo['title'])
 
-        if self.debug:
-            self._debug('filepath: {}'.format(filepath))
+        self._debug('filepath: {}'.format(filepath))
 
         subs = self._extract(filepath, videofile, exts)
 
-        if self.debug:
-            self._debug('subs: {}'.format(subs))
+        self._debug('subs: {}'.format(subs))
 
         return [{
             'link': referer,
