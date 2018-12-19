@@ -200,7 +200,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             return None
         ele_a = ele_a_list[1]
         download_link = ele_a.get('href')
-        return download_link, referer
+        return self._join_url(downloadpage_link, download_link), referer
 
     def _search_subs(self, videofile, languages, exts):
         videoname = self._get_videoname(videofile)  # basename, not include ext
@@ -230,10 +230,10 @@ class ZimukuSubSearcher(BaseSubSearcher):
             
         downloadpage_link, referer = self._visit_detailpage(
             subinfo['link'], referer)
-
+        self._debug('downloadpage_link: {}'.format(downloadpage_link))
         subtitle_download_link, referer = self._visit_downloadpage(
             downloadpage_link, referer)
-
+        self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
         filepath, referer = self._download_subs(
             subtitle_download_link, videofile, referer, subinfo['title'])
 
