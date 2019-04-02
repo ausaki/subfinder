@@ -96,6 +96,8 @@ class BaseSubSearcher(object):
         name = os.path.splitext(name)[0]
         return name
 
+    RE_SEASON = re.compile(
+        r'[Ss](?P<season>\d+)\.?')
     RE_SEASON_EPISODE = re.compile(
         r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
     RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|HR)')
@@ -135,6 +137,13 @@ class BaseSubSearcher(object):
             s, e = m.span()
             info['title'] = videoname[0:s].strip('.')
             last_index = e
+        else:
+            m = cls.RE_SEASON.search(videoname)
+            if m:
+                info['season'] = int(m.group('season'))
+                s, e = m.span()
+                info['title'] = videoname[0:s].strip('.')
+                last_index = e
 
         m = cls.RE_RESOLUTION.search(videoname)
         if m:
@@ -212,65 +221,37 @@ class BaseSubSearcher(object):
         -
         return a best matched subinfo
         """
-        season = videoinfo.get('season')
-        episode = videoinfo.get('episode')
-        resolution = videoinfo.get('resolution')
-        source = videoinfo.get('source')
-        video_encoding = videoinfo.get('video_encoding')
-        audio_encoding = videoinfo.get('audio_encoding')
-
-        filtered_subinfo_list_1 = []
-        filtered_subinfo_list_2 = []
-        filtered_subinfo_list_3 = []
-        filtered_subinfo_list_4 = []
-        filtered_subinfo_list_5 = []
-        filtered_subinfo_list = []
-
+        filter_field_list = [
+            'season',
+            'episode',
+            'resolution',
+            'source',
+            'video_encoding',
+            'audio_encoding'
+        ]
+        filtered_subinfo_list = dict((f, []) for f in filter_field_list)
+        
         for subinfo in subinfo_list:
             title = subinfo.get('title')
             videoinfo_ = cls._parse_videoname(title)
-            season_ = videoinfo_.get('season')
-            episode_ = videoinfo_.get('episode')
-            resolution_ = videoinfo_.get('resolution')
-            source_ = videoinfo_.get('source')
-            video_encoding_ = videoinfo_.get('video_encoding')
-            audio_encoding_ = videoinfo_.get('audio_encoding')
-            languages_ = subinfo.get('languages')
-            exts_ = subinfo.get('exts')
-
-            if (season == season_ and
-                episode == episode_ and
-                set(languages_).intersection(set(languages)) and
-                    set(exts_).intersection(set(exts))):
-
-                filtered_subinfo_list_1.append(subinfo)
-                if resolution_ == resolution:
-                    filtered_subinfo_list_2.append(subinfo)
-                    if source_ == source:
-                        filtered_subinfo_list_3.append(subinfo)
-                        if video_encoding_ == video_encoding:
-                            filtered_subinfo_list_4.append(subinfo)
-                            if audio_encoding_ == audio_encoding:
-                                filtered_subinfo_list_5.append(subinfo)
-        if filtered_subinfo_list_5:
-            filtered_subinfo_list = filtered_subinfo_list_5
-        elif filtered_subinfo_list_4:
-            filtered_subinfo_list = filtered_subinfo_list_4
-        elif filtered_subinfo_list_3:
-            filtered_subinfo_list = filtered_subinfo_list_3
-        elif filtered_subinfo_list_2:
-            filtered_subinfo_list = filtered_subinfo_list_2
-        elif filtered_subinfo_list_1:
-            filtered_subinfo_list = filtered_subinfo_list_1
-
-        if not filtered_subinfo_list:
-            return None
-        # sort by download_count and rate
-        sorted_subinfo_list = sorted(filtered_subinfo_list,
+            last_field = None
+            for field in filter_field_list:
+                if videoinfo.get(field) == videoinfo_.get(field):
+                    last_field = field
+                else:
+                    break
+            if last_field is not None:
+                filtered_subinfo_list[last_field].append(subinfo)
+        for field in filter_field_list[::-1]:
+            if len(filtered_subinfo_list[field]) > 0:
+                # sort by download_count and rate
+                sorted_subinfo_list = sorted(filtered_subinfo_list[field],
                                      key=lambda item: (
                                          item['rate'], item['download_count']),
                                      reverse=True)
-        return sorted_subinfo_list[0]
+                return sorted_subinfo_list[0]
+        return None
+       
 
     def _download_subs(self, download_link, videofile, referer='', sub_title=''):
         """ 下载字幕

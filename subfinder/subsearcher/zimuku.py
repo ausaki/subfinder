@@ -24,8 +24,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
-    API = 'https://www.zimuku.cn/search'
-    SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
+    API = 'https://www.zimuku.la/search'
 
     _cache = {}
     shortname = 'zimuku'
@@ -170,20 +169,28 @@ class ZimukuSubSearcher(BaseSubSearcher):
         headers = {
             'Referer': referer
         }
-        res = self.session.get(self._join_url(self.API, subgroup['link']))
+        res = self.session.get(self._join_url(self.API, subgroup['link']), headers=headers)
         doc = res.content
         referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
+        for subinfo in subinfo_list:
+            subinfo['link'] = self._join_url(res.url, subinfo['link'])
         return subinfo_list, referer
 
     def _visit_detailpage(self, detailpage_link, referer):
-        detailpage_link = self._join_url(self.API, detailpage_link)
-        m = re.search(r'(\d+)\.html', detailpage_link)
-        if not m:
+        headers = {
+            'Referer': referer
+        }
+        res = self.session.get(detailpage_link, headers=headers)
+        doc = res.content
+        referer = res.url
+        soup = bs4.BeautifulSoup(doc, 'lxml')
+        ele_a_list = soup.select('a#down1')
+        if not ele_a_list:
             return None
-        l = '{}.html'.format(m.group(1))
-        downloadpage_link = self._join_url(self.SUBTITLE_DOWNLOAD_LINK, l)
-        return downloadpage_link, detailpage_link
+        ele_a = ele_a_list[0]
+        downloadpage_link = self._join_url(res.url, ele_a.get('href'))
+        return downloadpage_link, referer
 
     def _visit_downloadpage(self, downloadpage_link, referer):
         """ get the real download link of subtitles.
@@ -200,7 +207,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
             return None
         ele_a = ele_a_list[1]
         download_link = ele_a.get('href')
-        return self._join_url(downloadpage_link, download_link), referer
+        download_link = self._join_url(res.url, download_link)
+        return download_link, referer
 
     def _search_subs(self, videofile, languages, exts):
         videoname = self._get_videoname(videofile)  # basename, not include ext
@@ -208,7 +216,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         keyword = videoinfo.get('title')
         if videoinfo['season'] != 0:
             keyword += '.S{:02d}'.format(videoinfo['season'])
-
+        
+        self._debug('keyword: {}'.format(keyword))
         self._debug('videoinfo: {}'.format(videoinfo))
 
          # try find subinfo_list from self._cache
@@ -219,7 +228,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             subinfo_list, referer = self._cache.get(keyword)
 
         self._debug('subinfo_list: {}'.format(subinfo_list))
-
+        
         subinfo = self._filter_subinfo_list(
             subinfo_list, videoinfo, languages, exts)
 
