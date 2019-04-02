@@ -21,7 +21,6 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API = 'http://www.zimuzu.io/search/index'
-    SUBTITLE_DOWNLOAD_LINK = 'http://www.subku.net/dld/'
 
     _cache = {}
     shortname = 'zimuzu'
