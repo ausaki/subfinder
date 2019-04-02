@@ -14,26 +14,27 @@ subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 Table of Contents
 =================
 
-   * [subfinder 字幕查找器](#subfinder - 字幕查找器)
+   * [subfinder 字幕查找器](#subfinder-字幕查找器)
    * [Table of Contents](#table-of-contents)
-      * [特性](# 特性)
-      * [安装](# 安装)
-      * [更新](# 更新)
-      * [使用方法](# 使用方法)
-         * [命令行](# 命令行)
-         * [Windows 右键菜单](#windows - 右键菜单)
-         * [macOS 右键菜单](#macos - 右键菜单)
-      * [图形界面](# 图形界面)
-      * [注意事项](# 注意事项)
-         * [shooter 字幕搜索器](#shooter - 字幕搜索器)
-         * [zimuku 字幕搜索器](#zimuku - 字幕搜索器)
-      * [扩展](# 扩展)
-         * [subfinder 架构](#subfinder - 架构)
-         * [自定义字幕搜索器](# 自定义字幕搜索器)
-      * [贡献](# 贡献)
-      * [参考](# 参考)
+      * [特性](#特性)
+      * [安装](#安装)
+      * [更新](#更新)
+      * [使用方法](#使用方法)
+         * [命令行](#命令行)
+         * [Windows 右键菜单](#windows-右键菜单)
+         * [macOS 右键菜单](#macos-右键菜单)
+      * [图形界面](#图形界面)
+      * [注意事项](#注意事项)
+         * [shooter 字幕搜索器](#shooter-字幕搜索器)
+         * [zimuku 字幕搜索器](#zimuku-字幕搜索器)
+      * [扩展](#扩展)
+         * [subfinder 架构](#subfinder-架构)
+         * [自定义字幕搜索器](#自定义字幕搜索器)
+      * [贡献](#贡献)
+      * [参考](#参考)
       * [License](#license)
-      * [更新历史](# 更新历史)
+      * [更新历史](#更新历史)
+         * [v1.0.8](#v108)
          * [v1.0.7](#v107)
          * [v1.0.6](#v106)
          * [v1.0.5](#v105)
@@ -108,7 +109,7 @@ Table of Contents
 
   当指定多个字幕查找器时，subfinder 会依次尝试每个字幕查找器去查找字幕，只要有一个字幕查找器返回字幕信息，则不再使用后面的字幕查找器查找字幕。
 
-  ** 注意：** 如果指定了多个字幕查找器，请不要指定 `languages` 参数，否则可能会出现 `LanguageError` 错误（因为每个 `SubSearcher` 支持的语言可能不相同）。
+  **注意：** 如果指定了多个字幕查找器，请不要指定 `languages` 参数，否则可能会出现 `LanguageError` 错误（因为每个 `SubSearcher` 支持的语言可能不相同）。
 
 常用参数说明（详细的参数信息请查看 `subfinder -h`）：
 
@@ -144,7 +145,7 @@ Table of Contents
 
 ![win_menu](assets/subfinder_menu.win.gif)
 
-** 如何添加注册表：**
+**如何添加注册表：**
 
 - 下载 [注册表文件](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.reg)，
 
@@ -163,7 +164,7 @@ Table of Contents
 - 将解压出的 subfinder.workflow 复制到 / Users/YourName/Library/Services。
 - 选中视频文件或目录，右键弹出菜单，选择 “服务（Services）” -> “查找字幕”。
 
-** 注意：在 workflow 中，subfinder 的路径是 `/usr/local/bin/subfinder`。**
+**注意：在 workflow 中，subfinder 的路径是 `/usr/local/bin/subfinder`。**
 
 如果想要了解如何配置 workerflow，可以参考:
 
@@ -176,7 +177,7 @@ Table of Contents
 
 ![subfinder_gui.win](assets/subfinder_gui.win.png)
 
-** 注意 **
+**注意**
 
 - GUI app 默认同时使用 shooter 和 zimuku 两个字幕搜索器。
 
@@ -230,7 +231,7 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
   | exts              | 字幕格式，如果为 None，则由 `subsearcher_class` 自己决定  | str or [str]                         |
   | subsearcher_class | 字幕搜索器，默认是 `ShooterSubSearcher`                   | BaseSubSearcher or [BaseSubSearcher] |
 
-  ** 注意：** 如果指定了多个 `subsearcher_class`，请不要指定 `languages` 参数，否则可能会出现校验错误（LanguageError），因为每个 `SubSearcher` 支持的语言可能不相同。
+  **注意：** 如果指定了多个 `subsearcher_class`，请不要指定 `languages` 参数，否则可能会出现校验错误（LanguageError），因为每个 `SubSearcher` 支持的语言可能不相同。
 
 - `start()`
 
@@ -330,11 +331,11 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 - 优化了 subsearcher。
 
-- 添加 --debug 选项，方便显示调试信息。
+- 添加--debug选项，方便显示调试信息。
 
 ### v1.0.5
 
-- 修复命令行参数 `-l`，`-e` 的问题。
+- 修复命令行参数`-l`，`-e`的问题。
 
 ### v1.0.4
 
