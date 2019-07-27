@@ -24,7 +24,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
-    API = 'https://www.zimuku.la/search'
+    API_URL = 'http://www.zimuku.la/search'
 
     _cache = {}
     shortname = 'zimuku'
@@ -157,7 +157,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         """ return subinfo_list of videoname
         """
         # searching subtitles
-        res = self.session.get(self.API, params={'q': videoname})
+        res = self.session.get(self.API_URL, params={'q': videoname})
         doc = res.content
         referer = res.url
         subgroups = self._parse_search_results_html(doc)
@@ -169,7 +169,8 @@ class ZimukuSubSearcher(BaseSubSearcher):
         headers = {
             'Referer': referer
         }
-        res = self.session.get(self._join_url(self.API, subgroup['link']), headers=headers)
+        res = self.session.get(self._join_url(
+            self.API_URL, subgroup['link']), headers=headers)
         doc = res.content
         referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
@@ -216,11 +217,11 @@ class ZimukuSubSearcher(BaseSubSearcher):
         keyword = videoinfo.get('title')
         if videoinfo['season'] != 0:
             keyword += '.S{:02d}'.format(videoinfo['season'])
-        
+
         self._debug('keyword: {}'.format(keyword))
         self._debug('videoinfo: {}'.format(videoinfo))
 
-         # try find subinfo_list from self._cache
+        # try find subinfo_list from self._cache
         if keyword not in self._cache:
             subinfo_list, referer = self._get_subinfo_list(keyword)
             self._cache[keyword] = (subinfo_list, referer)
@@ -228,7 +229,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             subinfo_list, referer = self._cache.get(keyword)
 
         self._debug('subinfo_list: {}'.format(subinfo_list))
-        
+
         subinfo = self._filter_subinfo_list(
             subinfo_list, videoinfo, languages, exts)
 
@@ -236,13 +237,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
 
         if not subinfo:
             return []
-            
+
         downloadpage_link, referer = self._visit_detailpage(
             subinfo['link'], referer)
         self._debug('downloadpage_link: {}'.format(downloadpage_link))
         subtitle_download_link, referer = self._visit_downloadpage(
             downloadpage_link, referer)
-        self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
+        self._debug('subtitle_download_link: {}'.format(
+            subtitle_download_link))
         filepath, referer = self._download_subs(
             subtitle_download_link, videofile, referer, subinfo['title'])
 

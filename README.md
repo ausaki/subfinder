@@ -21,6 +21,7 @@ Table of Contents
       * [更新](#更新)
       * [使用方法](#使用方法)
          * [命令行](#命令行)
+         * [配置文件](#配置文件)
          * [Windows 右键菜单](#windows-右键菜单)
          * [macOS 右键菜单](#macos-右键菜单)
       * [图形界面](#图形界面)
@@ -34,6 +35,7 @@ Table of Contents
       * [参考](#参考)
       * [License](#license)
       * [更新历史](#更新历史)
+         * [v1.0.9](#v109)
          * [v1.0.8](#v108)
          * [v1.0.7](#v107)
          * [v1.0.6](#v106)
@@ -118,6 +120,48 @@ Table of Contents
 | `-l, --languages` | 指定字幕语言，可同时指定多个。每个字幕查找器支持的语言不相同。具体支持的语言请看下文。             | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
 | `-e, --exts`      | 指定字幕文件格式，可同时指定多个。每个字幕查找器支持的文件格式不相同。具体支持的文件格式请看下文。 | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
 | `-m,--method`     | 指定字幕查找器，可同时指定多个。                                                                   | 否，subfinder 默认使用 shooter 查找字幕。          |
+| `--video_exts`     | 视频文件的后缀名（包括.，例如.mp4）                                    | 否          |
+| `--repeat` | 重复查找字幕，即使本地字幕已存在，默认False。 | 否 |
+| `--exclude` | 排除匹配模式的文件或目录，类似于shell的文件匹配模式。详情见下文 | 否 |
+| `--api_urls` | 指定字幕搜索器的API URL。详情见下文 | 否 |
+| `-c,--conf` | 配置文件                                                                   |否，SubFinder默认从~/.subfinder.json读取。|
+| `-s,--silence` | 静默运行，不输出日志                                                                   | 否 |
+| `--debug` | 调试模式，输出调试日志                                                                   | 否 |
+| `-h,--help` | 显示帮助信息                                                                   | 否|
+
+- `--exclude`, 支持的匹配模式类似于shell，`*` 匹配任意长度的字符串，`?` 匹配一个字符，`[CHARS]`匹配CHARS中的任一字符。例如：
+
+   - 排除包含`abc`的目录：`--exclude '*abc*/'`。注意添加单引号，防止shell对其进行扩展。
+
+   - 排除包含`abc`的文件：`--exclude '*abc*'`。注意和上个例子的区别，匹配目录时结尾有`/`目录分隔符，匹配文件则没有。
+
+
+- `--api_urls`
+
+   [字幕库](http://www.zimuku.la)的链接不太稳定，有时候会更换域名，因此提供`--api_urls`选项自定义API URL，以防域名或链接变动。
+
+   `--api_urls`只接收JSON格式的字符串。
+
+   获取正确的API URL的方法：
+
+   - 字幕库的API一般形如 http://www.zimuku.la/search， 这个URL就是网页端“搜索”功能的URL。
+
+   - 字幕组的API一般形如 http://www.zmz2019.com/search， 这个URL同样是网页端“搜索”功能的URL。
+
+   - 射手网的API比较稳定，一般不会变动。
+
+   配置示例：
+
+   ```
+   {
+      // 设置字幕库的API
+      "zimuku": "http://www.zimuku.la/search",
+      // 设置字幕组的API
+      "zimuzu": "http://www.zmz2019.com/search",
+      // 设置字幕组获取字幕下载链接的API
+      "zimuzu_subtitle_api_url": "http://got001.com/api/v1/static/subtitle/detail"
+   }
+   ```
 
 支持的语言和文件格式：
 
@@ -136,6 +180,32 @@ Table of Contents
 | zh_chs | 简体中文           |
 | zh_cht | 繁体中文           |
 | zh_en  | 双语               |
+
+### 配置文件
+
+配置文件是JSON格式的，支持命令行中的所有选项。命令行中指定的选项优先级高于配置文件的。
+
+配置文件中的key一一对应于命令行选项，例如`-m，--method`对应的key为`method`。
+
+示例：
+
+```json
+{
+   "languages": ["zh", "en", "zh_chs"],
+   "exts": ["ass", "srt"],
+   "method": ["shooter", "zimuzu", "zimuku"],
+   "video_exts": [".mp4", ".mkv", ".iso"],
+   "exclude": ["excluded_path/", "*abc.mp4"],
+   "api_urls": {
+      // 设置字幕库的API
+      "zimuku": "http://www.zimuku.la/search",
+      // 设置字幕组的API
+      "zimuzu": "http://www.zmz2019.com/search",
+      // 设置字幕组获取字幕下载链接的API
+      "zimuzu_subtitle_api_url": "http://got001.com/api/v1/static/subtitle/detail"
+   }
+}
+```
 
 ### Windows 右键菜单
 
@@ -318,6 +388,18 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 [MIT License](LICENSE)
 
 ## 更新历史
+
+### v1.0.9
+
+[issue 27](https://github.com/ausaki/subfinder/issues/27)
+
+- 支持用户配置文件
+
+- 支持用户自定义字幕组和字幕库的API URL。
+
+- 支持用户自定义视频文件的后缀。
+
+- 支持忽略文件或文件夹。
 
 ### v1.0.8
 

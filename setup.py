@@ -48,7 +48,7 @@ setup(
     license='MIT',
     packages=['subfinder', 'subfinder.subsearcher', 'subfinder.tools'],
     include_package_data=True,
-    python_requires='>=2.7',
+    python_requires='>=3',
     install_requires=requires,
     entry_points={
         'console_scripts': [

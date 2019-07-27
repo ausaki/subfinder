@@ -3,7 +3,10 @@ from __future__ import unicode_literals, print_function
 import os
 import re
 import bs4
-from subfinder.tools.compressed_file import CompressedFile
+try:
+    import urlparse
+except ImportError as e:
+    from urllib import parse as urlparse
 from .subsearcher import BaseSubSearcher
 
 
@@ -20,10 +23,16 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
-    API = 'http://www.zimuzu.io/search/index'
+    API_URL = 'http://www.zimuzu.io/search/index'
+    SUB_TITLE_API_URL = 'http://got001.com/api/v1/static/subtitle/detail'
 
     _cache = {}
     shortname = 'zimuzu'
+
+    def __init__(self, subfinder, **kwargs):
+        super(ZimuzuSubSearcher, self).__init__(subfinder, **kwargs)
+        self.SUB_TITLE_API_URL = self.api_urls.get(
+            'zimuzu_subtitle_api_url', self.__class__.SUB_TITLE_API_URL)
 
     @classmethod
     def _gen_subname(cls, videofile, language, ext, **kwargs):
@@ -68,7 +77,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             if not a:
                 continue
             url = a.get('href')
-            subinfo['link'] = self._join_url(self.API, url)
+            subinfo['link'] = self._join_url(self.API_URL, url)
             zh_title = a.get_text()
             for k, v in self.LANGUAGES_MAP.items():
                 if k in zh_title:
@@ -125,7 +134,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             videoinfo_ = self._parse_videoname(title)
             season_ = videoinfo_.get('season')
             episode_ = videoinfo_.get('episode')
-            
+
             if (season == season_ and
                 episode == episode_ and
                     set(languages_).intersection(set(languages))):
@@ -138,7 +147,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         """根据关键词搜索，返回字幕信息列表
         """
         res = self.session.get(
-            self.API, params={'keyword': keyword, 'search_type': 'subtitle'})
+            self.API_URL, params={'keyword': keyword, 'type': 'subtitle'})
         doc = res.content
         referer = res.url
         subinfo_list = self._parse_search_result_html(doc)
@@ -156,11 +165,25 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         return result, referer
 
     def _visit_downloadpage(self, downloadpage_link, referer):
+        """
+        该页面使用Vue动态渲染，通过请求API获取字幕URL
+        """
         headers = {'Referer': referer}
         res = self.session.get(downloadpage_link, headers=headers)
         referer = res.url
-        doc = res.content
-        download_link = self._parse_downloadpage_html(doc)
+        # doc = res.content
+        # download_link = self._parse_downloadpage_html(doc)
+        parts = urlparse.urlparse(downloadpage_link)
+        query = urlparse.parse_qs(parts.query)
+        code = query.get('code')
+        if code is not None:
+            code = code[0]
+        else:
+            return '', referer
+        json_res = self.session.get(
+            self.SUB_TITLE_API_URL, params={'code': code})
+        data = json_res.json()
+        download_link = data['data']['info']['file']
         return download_link, referer
 
     def _get_keyword(self, videoinfo):
@@ -205,7 +228,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
 
         subinfo = self._filter_subinfo_list(
             subinfo_list, videoinfo, languages, exts)
-        
+
         self._debug('subinfo: {}'.format(subinfo))
 
         if not subinfo:
@@ -213,10 +236,10 @@ class ZimuzuSubSearcher(BaseSubSearcher):
 
         detail_info, referer = self._visit_detailpage(subinfo['link'], referer)
         downloadpage_link = detail_info['downloadpage_link']
-
+        self._debug('downloadpage_link: {}'.format(downloadpage_link))
         download_link, referer = self._visit_downloadpage(
             downloadpage_link, referer)
-
+        self._debug('download_link: {}'.format(download_link))
         filepath, referer = self._download_subs(
             download_link, videofile, referer, subinfo['title'])
 

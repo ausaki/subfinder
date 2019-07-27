@@ -15,11 +15,11 @@ publish = 'twine upload -r pypi dist/*'
 
 [dev-packages]
 tox = "*"
-subfinder = {path = ".", editable = true}
 twine = "*"
 pyinstaller = "*"
 "autopep8" = "*"
 rope = "*"
+subfinder = {editable = true,path = "."}
 
 [packages]
 requests = ">=2.20.0"
@@ -30,4 +30,4 @@ rarfile = "*"
 six = "*"
 
 [requires]
-python_version = "2.7"
+python_version = "3.7"

@@ -64,6 +64,9 @@ class BaseSubSearcher(object):
         self.session = requests.session()
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
         self.subfinder = subfinder
+        self.api_urls = kwargs.get('api_urls', {})
+        self.API_URL = self.api_urls.get(
+            self.shortname, self.__class__.API_URL)
 
     def _debug(self, msg):
         self.subfinder.logger.debug(msg)
@@ -230,7 +233,7 @@ class BaseSubSearcher(object):
             'audio_encoding'
         ]
         filtered_subinfo_list = dict((f, []) for f in filter_field_list)
-        
+
         for subinfo in subinfo_list:
             title = subinfo.get('title')
             videoinfo_ = cls._parse_videoname(title)
@@ -246,12 +249,11 @@ class BaseSubSearcher(object):
             if len(filtered_subinfo_list[field]) > 0:
                 # sort by download_count and rate
                 sorted_subinfo_list = sorted(filtered_subinfo_list[field],
-                                     key=lambda item: (
-                                         item['rate'], item['download_count']),
-                                     reverse=True)
+                                             key=lambda item: (
+                    item['rate'], item['download_count']),
+                    reverse=True)
                 return sorted_subinfo_list[0]
         return None
-       
 
     def _download_subs(self, download_link, videofile, referer='', sub_title=''):
         """ 下载字幕

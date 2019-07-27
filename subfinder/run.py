@@ -2,10 +2,12 @@
 """ 命令行入口
 """
 from __future__ import unicode_literals, print_function
+import os
 import sys
 import time
 import argparse
 import six
+import json
 from .subsearcher import get_subsearcher, get_all_subsearchers, BaseSubSearcher
 from .subfinder import SubFinder
 from . import __version__
@@ -56,33 +58,70 @@ def run(subfinder_class):
                         nargs='+',
                         help="what's formats of subtitle you want to find")
     parser.add_argument('-m', '--method',
-                        nargs='+', type=find_method, default='default',
+                        nargs='+', type=find_method,
                         help=method_msg())
+    parser.add_argument('-c', '--conf', default='~/.subfinder.json',
+                        help='configuration file')
+    parser.add_argument('--video_exts',
+                        nargs='+',
+                        help='the extensions of video file(include ".", e.g: .mp4)')
+    parser.add_argument('--repeat',
+                        action='store_true',
+                        help='search the subtitles of file even there are existing subtitles')
+    parser.add_argument('-x', '--exclude',
+                        nargs='+',
+                        help='exclude files and directorys')
+    parser.add_argument('--api_urls',
+                        type=json.loads,
+                        help="show subfinder's version")
     parser.add_argument('-s', '--silence',
-                        action='store_true', default=False,
+                        action='store_true',
                         help="don't print anything, default to False")
     parser.add_argument('-p', '--pause',
-                        action='store_true', default=False,
+                        action='store_true',
                         help="pause script after subfinder done. this option is used in 'Context Menu on Windows' only")
     parser.add_argument('-v', '--version',
                         action='version', version='subfinder {v}'.format(v=__version__),
                         help="show subfinder's version")
     parser.add_argument('--debug',
-                        action='store_true', default=False,
+                        action='store_true',
                         help="print debug infomation, default to False")
 
     args = parser.parse_args()
-    
+
     # try to make `path` to unicode string in python2
     if six.PY2 and isinstance(args.path, six.binary_type):
         args.path = args.path.decode(sys.getfilesystemencoding())
 
-    subfinder = subfinder_class(path=args.path,
-                                languages=args.languages,
-                                exts=args.exts,
-                                subsearcher_class=args.method,
-                                silence=args.silence,
-                                debug=args.debug)
+    # parse config file
+    args.conf = os.path.expanduser(args.conf)
+    args.conf = os.path.expandvars(args.conf)
+    conf_dict = {}
+    if os.path.exists(args.conf):
+        with open(args.conf, 'r') as fp:
+            try:
+                conf_dict = json.load(fp)
+            except json.JSONDecodeError as e:
+                print("解析配置出错，请检查配置文件格式是否正确")
+                sys.exit(127)
+    # parse opt `method`
+    if 'method' in conf_dict:
+        method = conf_dict['method']
+        new_method = [find_method(m) for m in method]
+        conf_dict['method'] = new_method
+
+    # merge config file and options of cmd
+    for opt, val in args.__dict__.items():
+        # val is default value
+        if val is False or val is None:
+            continue
+        # otherwise overwrite value in config file
+        conf_dict[opt] = val
+
+    root = conf_dict.pop('path')
+    subfinder = subfinder_class(path=root,
+                                subsearcher_class=conf_dict['method'] if 'method' in conf_dict else None,
+                                **conf_dict)
     subfinder.start()
     subfinder.done()
 

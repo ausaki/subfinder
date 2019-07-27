@@ -2,6 +2,8 @@
 from __future__ import unicode_literals
 import os
 import sys
+import glob
+import fnmatch
 import logging
 import mimetypes
 import traceback
@@ -12,6 +14,7 @@ from .subsearcher import get_subsearcher, exceptions
 class Pool(object):
     """ 模拟线程池，实际上还是同步执行代码
     """
+
     def __init__(self, size):
         self.size = size
 
@@ -26,12 +29,13 @@ class SubFinder(object):
     """ 字幕查找器
     """
 
-    VIDEO_EXTS = ['.mkv', '.mp4', '.ts', '.avi', '.wmv']
+    DEFAULT_VIDEO_EXTS = {'.mkv', '.mp4', '.ts', '.avi', '.wmv'}
 
     def __init__(self, path='./', languages=None, exts=None, subsearcher_class=None, **kwargs):
         self.set_path(path)
         self.languages = languages
         self.exts = exts
+        self.subsearcher = []
 
         # silence: dont print anything
         self.silence = kwargs.get('silence', False)
@@ -39,6 +43,16 @@ class SubFinder(object):
         self.logger_output = kwargs.get('logger_output', sys.stdout)
         # debug
         self.debug = kwargs.get('debug', False)
+        # video_exts
+        self.video_exts = set(self.__class__.DEFAULT_VIDEO_EXTS)
+        if 'video_exts' in kwargs:
+            video_exts = set(kwargs.get('video_exts'))
+            self.video_exts.update(video_exts)
+        # repeat
+        self.repeat = kwargs.get('repeat', False)
+        # exclude
+        self.exclude = kwargs.get('exclude', [])
+
         self._init_session()
         self._init_pool()
         self._init_logger()
@@ -51,15 +65,38 @@ class SubFinder(object):
         if not isinstance(subsearcher_class, list):
             subsearcher_class = [subsearcher_class]
 
-        self.subsearcher = [sc(self) for sc in subsearcher_class]
+        # api urls
+        api_urls = kwargs.get('api_urls', {})
+
+        for sc in subsearcher_class:
+            self.subsearcher.append(sc(self, api_urls=api_urls))
 
     def _is_videofile(self, f):
-        """ 判断 f 是否是视频文件
+        """ determine whether `f` is a valid video file, mostly base on file extension 
         """
         if os.path.isfile(f):
             types = mimetypes.guess_type(f)
             mtype = types[0]
-            if (mtype and mtype.split('/')[0] == 'video') or (os.path.splitext(f)[1] in self.VIDEO_EXTS):
+            if (mtype and mtype.split('/')[0] == 'video') or (os.path.splitext(f)[1] in self.video_exts):
+                return True
+        return False
+
+    def _has_subtitles(self, f):
+        """ 判断f是否已经有了本地字幕
+        """
+        dirname = os.path.dirname(f)
+        basename = os.path.basename(f)
+        basename_no_ext, _ = os.path.splitext(basename)
+        exts = self.exts or ['.ass', '.srt']
+        for filename in os.listdir(dirname):
+            _, ext = os.path.splitext(filename)
+            if filename.startswith(basename_no_ext) and ext in exts:
+                return True
+        return False
+
+    def _fnmatch(self, f):
+        for pattern in self.exclude:
+            if fnmatch.fnmatchcase(f, pattern):
                 return True
         return False
 
@@ -67,16 +104,32 @@ class SubFinder(object):
         """ 筛选出 path 目录下所有的视频文件
         """
         if self._is_videofile(path):
-            return [path, ]
+            if not self.repeat and self._has_subtitles(path):
+                return
+            yield path
+            return
 
-        if os.path.isdir(path):
-            result = []
-            for root, dirs, files in os.walk(path):
-                result.extend(filter(self._is_videofile, map(
-                    lambda f: os.path.join(root, f), files)))
-            return result
-        else:
-            return []
+        if not os.path.isdir(path):
+            return
+
+        for root, dirs, files in os.walk(path):
+            for filename in files:
+                filepath = os.path.join(root, filename)
+                if not self._is_videofile(filepath):
+                    continue
+                if self._fnmatch(filename):
+                    continue
+                if not self.repeat and self._has_subtitles(filepath):
+                    continue
+                yield filepath
+
+            # remove dir in self.exclude
+            removed_index = []
+            for i, dirname in enumerate(dirs):
+                if self._fnmatch(dirname + '/'):
+                    removed_index.append(i)
+            for i in removed_index:
+                dirs.pop(i)
 
     def _init_session(self):
         """ 初始化 requests.Session
@@ -157,14 +210,7 @@ class SubFinder(object):
         """
         self.logger.info('开始')
         videofiles = self._filter_path(self.path)
-        l = len(videofiles)
-        if l == 0:
-            self.logger.info(
-                '在 {} 下没有发现视频文件'.format(self.path))
-            return
-        else:
-            self.logger.info('找到 {} 个视频文件'.format(l))
-
+        # l = len(videofiles)
         for f in videofiles:
             self._history[f] = []
             self.pool.spawn(self._download, f)
@@ -176,4 +222,4 @@ class SubFinder(object):
                 '{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
-       pass
+        pass
