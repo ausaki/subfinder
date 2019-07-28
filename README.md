@@ -2,6 +2,8 @@
 
 subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 
+**注意：这是python2的版本，SubFinder正式版从1.0.9开始不再支持python2。**
+
 ---
 
 [![PyPi](https://img.shields.io/pypi/v/subfinder.svg)](https://pypi.org/project/subfinder/)
