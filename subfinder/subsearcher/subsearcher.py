@@ -76,14 +76,14 @@ class BaseSubSearcher(object):
         for lang in languages:
             if lang not in cls.SUPPORT_LANGUAGES:
                 raise exceptions.LanguageError(
-                    '{} don\'t support "{}" language'.format(cls.__name__, lang))
+                    '{} doesn\'t support "{}" language'.format(cls.__name__, lang))
 
     @classmethod
     def _check_exts(cls, exts):
         for ext in exts:
             if ext not in cls.SUPPORT_EXTS:
                 raise exceptions.ExtError(
-                    '{} don\'t support "{}" ext'.format(cls.__name__, ext))
+                    '{} doesn\'t support "{}" ext'.format(cls.__name__, ext))
 
     @classmethod
     def _join_url(cls, url, path):
@@ -103,12 +103,12 @@ class BaseSubSearcher(object):
         r'[Ss](?P<season>\d+)\.?')
     RE_SEASON_EPISODE = re.compile(
         r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
-    RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|HR)')
+    RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|2160[Pp]|HR)')
     RE_SOURCE = re.compile(
-        r'\.(?P<source>BD|BluRay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
+        r'\.(?P<source>BD|Blu[Rr]ay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
     RE_AUDIO_ENC = re.compile(
         r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
-    RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H.264|AVC1|H.265)')
+    RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
 
     @classmethod
     def _parse_videoname(cls, videoname):
@@ -126,53 +126,44 @@ class BaseSubSearcher(object):
             'title': '',
             'season': 0,
             'episode': 0,
-            'sub_title': '',
             'resolution': '',
             'source': '',
             'audio_encoding': '',
             'video_encoding': '',
         }
-        last_index = 0
+        mapping = {
+            'resolution': cls.RE_RESOLUTION,
+            'source': cls.RE_SOURCE,
+            'audio_encoding': cls.RE_AUDIO_ENC,
+            'video_encoding': cls.RE_VIDEO_ENC
+        }
+        index = len(videoname)
         m = cls.RE_SEASON_EPISODE.search(videoname)
         if m:
             info['season'] = int(m.group('season'))
             info['episode'] = int(m.group('episode'))
-            s, e = m.span()
-            info['title'] = videoname[0:s].strip('.')
-            last_index = e
+            index, _ = m.span()
+            info['title'] = videoname[0:index].strip('.')
         else:
             m = cls.RE_SEASON.search(videoname)
             if m:
                 info['season'] = int(m.group('season'))
-                s, e = m.span()
-                info['title'] = videoname[0:s].strip('.')
-                last_index = e
-
-        m = cls.RE_RESOLUTION.search(videoname)
-        if m:
-            info['resolution'] = m.group('resolution')
-            s, e = m.span()
-            if info['title'] == '':
-                info['title'] = videoname[0:s].strip('.')
-
-            if info['season'] > 0 and info['episode'] > 0:
-                info['sub_title'] = videoname[last_index:s].strip('.')
-            last_index = e
+                index, _ = m.span()
+                info['title'] = videoname[0:index].strip('.')
+        
+        for k, r in mapping.items():
+            m = r.search(videoname)
+            if m:
+                info[k] = m.group(k)
+                i, e = m.span()
+                if info['title'] == '' or i < index:
+                    index = i
+                    info['title'] = videoname[0:index].strip('.')
 
         if info['title'] == '':
-            info['title'] = videoname
+            i = videoname.find('.')
+            info['title'] = videoname[:i] if i > 0 else videoname
 
-        m = cls.RE_SOURCE.search(videoname)
-        if m:
-            info['source'] = m.group('source')
-
-        m = cls.RE_AUDIO_ENC.search(videoname)
-        if m:
-            info['audio_encoding'] = m.group('audio_encoding')
-
-        m = cls.RE_VIDEO_ENC.search(videoname)
-        if m:
-            info['video_encoding'] = m.group('video_encoding')
         return info
 
     @classmethod
@@ -239,7 +230,7 @@ class BaseSubSearcher(object):
             videoinfo_ = cls._parse_videoname(title)
             last_field = None
             for field in filter_field_list:
-                if videoinfo.get(field) == videoinfo_.get(field):
+                if videoinfo.get(field).lower() == videoinfo_.get(field).lower():
                     last_field = field
                 else:
                     break

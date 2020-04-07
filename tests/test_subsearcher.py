@@ -23,7 +23,6 @@ def test_parse_videoname():
             'title': 'TV_TITLE',
             'season': 0,
             'episode': 0,
-            'sub_title': '',
             'resolution': '720p',
             'source': 'HDTV',
             'video_encoding': 'x264',
@@ -33,7 +32,6 @@ def test_parse_videoname():
             'title': 'TV_TITLE',
             'season': 1,
             'episode': 1,
-            'sub_title': 'SUB_TITLE',
             'resolution': '720p',
             'source': 'HDTV',
             'video_encoding': 'x264',
@@ -43,12 +41,20 @@ def test_parse_videoname():
             'title': 'TV_TITLE',
             'season': 10,
             'episode': 10,
-            'sub_title': 'SUB_TITLE',
             'resolution': '1080P',
             'source': 'WEB-DL',
             'video_encoding': 'x264',
             'audio_encoding': 'AC3.5.1'
         },
+        'Ballon.2018.Bluray.REMUX.GER.2160p.HEVC.TrueHD.7.1.Atmos-MOLAMOLA.mkv': {
+            'title': 'Ballon.2018',
+            'season': 0,
+            'episode': 0,
+            'resolution': '2160p',
+            'source': 'Bluray',
+            'video_encoding': '',
+            'audio_encoding': ''
+        }
     }
     for name, info in test_cases.items():
         info_ = BaseSubSearcher._parse_videoname(name)

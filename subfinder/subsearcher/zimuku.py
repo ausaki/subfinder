@@ -150,8 +150,9 @@ class ZimukuSubSearcher(BaseSubSearcher):
     def _filter_subgroup(self, subgroups):
         """ choose a best subgroup from `subgroups`
         """
-        subgroup = subgroups[0] if subgroups else None
-        return subgroup
+        if not subgroups:
+            return None
+        return subgroups[0]
 
     def _get_subinfo_list(self, videoname):
         """ return subinfo_list of videoname
@@ -162,7 +163,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         referer = res.url
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
-            return []
+            return [], referer                   
         subgroup = self._filter_subgroup(subgroups)
 
         # get subtitles
@@ -216,7 +217,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         videoinfo = self._parse_videoname(videoname)
         keyword = videoinfo.get('title')
         if videoinfo['season'] != 0:
-            keyword += '.S{:02d}'.format(videoinfo['season'])
+            keyword += ' S{:02d}'.format(videoinfo['season'])
 
         self._debug('keyword: {}'.format(keyword))
         self._debug('videoinfo: {}'.format(videoinfo))

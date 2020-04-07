@@ -87,9 +87,10 @@ class SubFinder(object):
         dirname = os.path.dirname(f)
         basename = os.path.basename(f)
         basename_no_ext, _ = os.path.splitext(basename)
-        exts = self.exts or ['.ass', '.srt']
+        exts = self.exts or ['ass', 'srt']
         for filename in os.listdir(dirname):
             _, ext = os.path.splitext(filename)
+            ext = ext[1:]
             if filename.startswith(basename_no_ext) and ext in exts:
                 return True
         return False
