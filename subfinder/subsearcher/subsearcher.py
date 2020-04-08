@@ -230,7 +230,13 @@ class BaseSubSearcher(object):
             videoinfo_ = cls._parse_videoname(title)
             last_field = None
             for field in filter_field_list:
-                if videoinfo.get(field).lower() == videoinfo_.get(field).lower():
+                i = videoinfo.get(field)
+                if isinstance(i, str):
+                    i = i.lower()
+                j = videoinfo_.get(field)
+                if isinstance(j, str):
+                    j = j.lower()
+                if i == j:
                     last_field = field
                 else:
                     break
