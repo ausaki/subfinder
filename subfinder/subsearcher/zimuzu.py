@@ -82,9 +82,15 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             for k, v in self.LANGUAGES_MAP.items():
                 if k in zh_title:
                     subinfo['languages'].append(v)
-            font = item.find('font', class_="f4")
-            en_title = font.string
-            subinfo['title'] = en_title
+            p_eles = item.select('div.fl-info > p')
+            if not p_eles:
+                continue
+            for p_ele in p_eles:
+                if '版本' in p_ele.get_text():
+                    subinfo['title'] = p_ele.span.string
+                    break
+            if not subinfo['title']:
+                continue
             result.append(subinfo)
         return result
 
