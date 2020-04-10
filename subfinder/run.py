@@ -73,7 +73,7 @@ def run(subfinder_class):
                         help='exclude files and directorys')
     parser.add_argument('--api_urls',
                         type=json.loads,
-                        help="show subfinder's version")
+                        help="specify the api urls with JSON")
     parser.add_argument('-s', '--silence',
                         action='store_true',
                         help="don't print anything, default to False")
