@@ -1,6 +1,5 @@
 import os
-import re
-from re import sub, subn
+import urllib
 import bs4
 from .subsearcher import BaseSubSearcher
 
@@ -30,7 +29,7 @@ class SubHDSubSearcher(BaseSubSearcher):
         self.API_SUBTITLE_DOWNLOAD = self.api_urls.get(
             'subhd_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD)
         self.API_SUBTITLE_PREVIEW = self.api_urls.get(
-            'subhd_api_subtitle_preview', self.__class__.API_SUBTITLE_DOWNLOAD
+            'subhd_api_subtitle_preview', self.__class__.API_SUBTITLE_PREVIEW
         )
 
     def _parse_search_results_html(self, doc):
@@ -89,7 +88,9 @@ class SubHDSubSearcher(BaseSubSearcher):
         """ return subinfo_list of videoname
         """
         # searching subtitles
-        url = self._join_url(self.API_URL, videoname)
+        url = self.API_URL
+        if not url.endswith('/'): url += '/'
+        url += urllib.parse.quote(videoname) 
         res = self.session.get(url)
         doc = res.content
         referer = res.url
@@ -99,16 +100,11 @@ class SubHDSubSearcher(BaseSubSearcher):
         return subinfo_list, referer
 
     def _visit_detailpage(self, detailpage_link, referer):
-        cookie = {
-            'ci_session': '1bch2vfbae275t8cu8u9uqs0oks4gpk5',
-            'Hm_lvt_36f45ef10337991c93242d418c95baa3': '1594656652',
-            'Hm_lpvt_36f45ef10337991c93242d418c95baa3': '1594716149',
-        }
         download_link = ''
         headers = {
             'Referer': referer
         }
-        res = self.session.get(detailpage_link, headers=headers, cookies=cookie)
+        res = self.session.get(detailpage_link, headers=headers)
         if not res.ok:
             return download_link, ''
         doc = res.text
@@ -122,7 +118,7 @@ class SubHDSubSearcher(BaseSubSearcher):
             'sub_id': button_download.get('sid'),
             'dtoken1': button_download.get('dtoken1'),
         }
-        res = self.session.post(api_subtitle_url, json=params, cookies=cookie)
+        res = self.session.post(api_subtitle_url, json=params)
         if not res.ok:
             return download_link, ''
         data = res.json()

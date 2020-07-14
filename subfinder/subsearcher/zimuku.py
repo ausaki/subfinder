@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals, print_function
-import os
 import re
 import bs4
 from .subsearcher import BaseSubSearcher
@@ -24,7 +23,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
-    API_URL = 'http://www.zimuku.la/search'
+    API_URL = 'http://www.zimuku.la/search/'
 
     _cache = {}
     shortname = 'zimuku'
@@ -141,7 +140,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         """
         # searching subtitles
         res = self.session.get(self.API_URL, params={'q': videoname})
-        doc = res.content
+        doc = res.text
         referer = res.url
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
@@ -155,7 +154,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         }
         res = self.session.get(self._join_url(
             self.API_URL, subgroup['link']), headers=headers)
-        doc = res.content
+        doc = res.text
         referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
         for subinfo in subinfo_list:

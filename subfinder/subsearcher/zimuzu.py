@@ -1,6 +1,5 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals, print_function
-import os
 import re
 import bs4
 try:
@@ -24,15 +23,15 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'http://www.zimuzu.io/search/index'
-    SUB_TITLE_API_URL = 'http://got001.com/api/v1/static/subtitle/detail'
+    API_SUBTITLE_DOWNLOAD = '/api/v1/static/subtitle/detail'
 
     _cache = {}
     shortname = 'zimuzu'
 
     def __init__(self, subfinder, **kwargs):
         super(ZimuzuSubSearcher, self).__init__(subfinder, **kwargs)
-        self.SUB_TITLE_API_URL = self.api_urls.get(
-            'zimuzu_api_subtitle', self.__class__.SUB_TITLE_API_URL)
+        self.API_SUBTITLE_DOWNLOAD = self.api_urls.get(
+            'zimuzu_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD)
 
 
     def _parse_search_result_html(self, doc):
@@ -169,12 +168,13 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         else:
             return '', referer
         # parse api url for real downloadable url
-        subtitle_api_url = self.SUB_TITLE_API_URL
-        pattern = r'(/api/v{\d}+/static/subtitle/detail\?code=)'
+        api_url = self.API_SUBTITLE_DOWNLOAD
+        pattern = r'(/api/v{\d}+/static/subtitle/detail)\?code='
         match = re.search(pattern, doc)
         if match:
-            subtitle_api_url = match.group(1)
-        json_res = self.session.get(subtitle_api_url, params={'code': code})
+            api_url = match.group(1)
+        api_url = self._join_url(referer, api_url)
+        json_res = self.session.get(api_url, params={'code': code})
         data = json_res.json()
         download_link = data['data']['info']['file']
         return download_link, referer
