@@ -30,7 +30,7 @@ Table of Contents
   - [参考](#参考)
   - [License](#license)
   - [更新历史](#更新历史)
-    - [v1.1.3](#v113)
+    - [v1.1.3](#v114)
     - [v1.1.2](#v112)
     - [v1.1.1](#v111)
     - [v1.1.0](#v110)
@@ -292,6 +292,10 @@ Table of Contents
 [MIT License](LICENSE)
 
 ## 更新历史
+
+### v1.1.4
+
+- hotfix
 
 ### v1.1.3
 
