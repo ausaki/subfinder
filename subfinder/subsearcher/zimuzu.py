@@ -22,7 +22,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     }
     COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
-    API_URL = 'http://www.zimuzu.io/search/index'
+    API_URL = 'http://www.rrys2020.com/search/index'
     API_SUBTITLE_DOWNLOAD = '/api/v1/static/subtitle/detail'
 
     _cache = {}
