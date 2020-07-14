@@ -10,11 +10,13 @@ from .subsearcher import (
 from .shooter import ShooterSubSearcher
 from .zimuku import ZimukuSubSearcher
 from .zimuzu import ZimuzuSubSearcher
+from .subhd import SubHDSubSearcher
 
 def _register_internal_subsearcher():
     register_subsearcher('default', ShooterSubSearcher)
     register_subsearcher(ShooterSubSearcher.shortname, ShooterSubSearcher)
     register_subsearcher(ZimukuSubSearcher.shortname, ZimukuSubSearcher)
     register_subsearcher(ZimuzuSubSearcher.shortname, ZimuzuSubSearcher)
+    register_subsearcher(SubHDSubSearcher.shortname, SubHDSubSearcher)
 
 _register_internal_subsearcher()

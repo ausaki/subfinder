@@ -19,7 +19,7 @@ class ShooterSubSearcher(BaseSubSearcher):
         'en': 'Eng'
     }
 
-    def _search_subs(self, videofile, languages, exts):
+    def _search_subs(self, videofile, languages, exts, keyword=None):
         filehash = self._compute_video_hash(videofile)
         root, basename = os.path.split(videofile)
         payload = {'filehash': filehash,

@@ -60,14 +60,16 @@ def run(subfinder_class):
     parser.add_argument('-m', '--method',
                         nargs='+', type=find_method,
                         help=method_msg())
+    parser.add_argument('-k', '--keyword',
+                        help='keyworkd for the video using to search on the subtitle website')
     parser.add_argument('-c', '--conf', default='~/.subfinder.json',
                         help='configuration file')
     parser.add_argument('--video_exts',
                         nargs='+',
                         help='the extensions of video file(include ".", e.g: .mp4)')
-    parser.add_argument('--repeat',
+    parser.add_argument('--ignore',
                         action='store_true',
-                        help='search the subtitles of file even there are existing subtitles')
+                        help='search subtitles even there are existing subtitles')
     parser.add_argument('-x', '--exclude',
                         nargs='+',
                         help='exclude files and directorys')

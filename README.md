@@ -14,58 +14,43 @@ subfinder 是一个通用字幕查找器，可以查找字幕并下载。
 Table of Contents
 =================
 
-   * [subfinder 字幕查找器](#subfinder-字幕查找器)
-   * [Table of Contents](#table-of-contents)
-      * [特性](#特性)
-      * [安装](#安装)
-      * [更新](#更新)
-      * [使用方法](#使用方法)
-         * [命令行](#命令行)
-         * [配置文件](#配置文件)
-         * [Windows 右键菜单](#windows-右键菜单)
-         * [macOS 右键菜单](#macos-右键菜单)
-      * [图形界面](#图形界面)
-      * [注意事项](#注意事项)
-         * [shooter 字幕搜索器](#shooter-字幕搜索器)
-         * [zimuku 字幕搜索器](#zimuku-字幕搜索器)
-      * [扩展](#扩展)
-         * [subfinder 架构](#subfinder-架构)
-         * [自定义字幕搜索器](#自定义字幕搜索器)
-      * [贡献](#贡献)
-      * [参考](#参考)
-      * [License](#license)
-      * [更新历史](#更新历史)
-         * [v1.1.1](#v111)
-         * [v1.1.0](#v110)
-         * [v1.0.9](#v109)
-         * [v1.0.8](#v108)
-         * [v1.0.7](#v107)
-         * [v1.0.6](#v106)
-         * [v1.0.5](#v105)
-         * [v1.0.4](#v104)
-         * [v1.0.3](#v103)
-         * [v1.0.2](#v102)
-         * [v1.0.1](#v101)
+  - [特性](#特性)
+  - [安装](#安装)
+  - [更新](#更新)
+  - [使用方法](#使用方法)
+    - [命令行](#命令行)
+    - [配置文件](#配置文件)
+    - [Windows 右键菜单](#windows-右键菜单)
+    - [macOS 右键菜单](#macos-右键菜单)
+  - [图形界面](#图形界面)
+  - [注意事项](#注意事项)
+    - [shooter 字幕搜索器](#shooter-字幕搜索器)
+    - [zimuku 字幕搜索器](#zimuku-字幕搜索器)
+  - [贡献](#贡献)
+  - [参考](#参考)
+  - [License](#license)
+  - [更新历史](#更新历史)
+    - [v1.1.3](#v113)
+    - [v1.1.2](#v112)
+    - [v1.1.1](#v111)
+    - [v1.1.0](#v110)
+    - [v1.0.9](#v109)
+    - [v1.0.8](#v108)
+    - [v1.0.7](#v107)
+    - [v1.0.6](#v106)
+    - [v1.0.5](#v105)
+    - [v1.0.4](#v104)
+    - [v1.0.3](#v103)
+    - [v1.0.2](#v102)
+    - [v1.0.1](#v101)
 
 ---
 
 ## 特性
 
-- 支持射手字幕网提供的 API，可以精确匹配字幕。
+- 支持提供的 API，可以精确匹配字幕。
 
-- 支持从 [字幕库](https://www.zimuku.cn/) 搜索字幕。
-
-- 支持从 [字幕组](http://www.zimuzu.io/) 搜索字幕。
-
-- 支持指定语言和格式查找字幕。
-
-- 自动将字幕下载至和视频文件相同的目录，自动将字幕文件重命名为视频文件名，方便播放器自动加载字幕。
-
-- 支持线程和协程并发下载。
-
-- 支持 python2 和 python3。
-
-- 支持全平台（Windows、macOS 和 Linux）
+- 支持 [射手字幕网](https://www.shooter.cn/), [字幕库](https://www.zimuku.cn/), [字幕组](http://www.zimuzu.io/), [SubHD](https://subhd.tv)。
 
 ## 安装
 
@@ -93,27 +78,25 @@ Table of Contents
 
 ### 命令行
 
-![subfinder_cmd.macos](assets/subfinder_cmd.macos.gif)
-
 - 使用默认字幕查找器（shooter）查找单个视频的字幕：
 
   `subfinder /path/to/videofile`
 
-- 使用默认字幕查找器（shooter）查找目录下（递归目录）所有视频的字幕：
+- 使用默认字幕查找器（shooter）查找目录下（递归所有子目录）所有视频的字幕：
 
   `subfinder /path/to/directory_contains_video`
 
 - 使用指定的字幕查找器查找字幕，例如 zimuku：
 
-  `subfinder /path/to/directory_contains_video -m zimuku`
+  `subfinder /path/to/videofile -m zimuku`
 
 - 同时使用多个字幕查找器查找字幕
 
-  `subfinder /path/to/directory_contains_video -m shooter zimuku`
+  `subfinder /path/to/videofile -m shooter zimuku`
 
   当指定多个字幕查找器时，subfinder 会依次尝试每个字幕查找器去查找字幕，只要有一个字幕查找器返回字幕信息，则不再使用后面的字幕查找器查找字幕。
 
-  **注意：** 如果指定了多个字幕查找器，请不要指定 `languages` 参数，否则可能会出现 `LanguageError` 错误（因为每个 `SubSearcher` 支持的语言可能不相同）。
+  ** 注意：** 如果指定了多个字幕查找器，请不要指定 `languages` 参数，否则可能会出现 `LanguageError` 错误（因为每个 `SubSearcher` 支持的语言可能不相同）。
 
 常用参数说明（详细的参数信息请查看 `subfinder -h`）：
 
@@ -122,48 +105,59 @@ Table of Contents
 | `-l, --languages` | 指定字幕语言，可同时指定多个。每个字幕查找器支持的语言不相同。具体支持的语言请看下文。             | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
 | `-e, --exts`      | 指定字幕文件格式，可同时指定多个。每个字幕查找器支持的文件格式不相同。具体支持的文件格式请看下文。 | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
 | `-m,--method`     | 指定字幕查找器，可同时指定多个。                                                                   | 否，subfinder 默认使用 shooter 查找字幕。          |
-| `--video_exts`     | 视频文件的后缀名（包括.，例如.mp4）                                    | 否          |
-| `--repeat` | 重复查找字幕，即使本地字幕已存在，默认False。 | 否 |
-| `--exclude` | 排除匹配模式的文件或目录，类似于shell的文件匹配模式。详情见下文 | 否 |
-| `--api_urls` | 指定字幕搜索器的API URL。详情见下文 | 否 |
-| `-c,--conf` | 配置文件                                                                   |否，SubFinder默认从~/.subfinder.json读取。|
-| `-s,--silence` | 静默运行，不输出日志                                                                   | 否 |
-| `--debug` | 调试模式，输出调试日志                                                                   | 否 |
-| `-h,--help` | 显示帮助信息                                                                   | 否|
+| `-k, --keyword`   | 手动搜索关键字. 当 SubFinder 使用本身的关键字无法搜索到字幕时, 可以通过这个参数手动指定关键字.     | 否                                                 |
+| `--video_exts`    | 视频文件的后缀名（包括.，例如. mp4）                                                               | 否                                                 |
+| `--ignore`        | 忽略本地已有的字幕强行查找字幕. 注意: 这可能会覆盖本地已有的字幕. 默认 False。                     | 否                                                 |
+| `--exclude`       | 排除文件或目录，支持类似于 shell 的文件匹配模式。详情见下文                                        | 否                                                 |
+| `--api_urls`      | 指定字幕搜索器的 API URL。详情见下文                                                               | 否                                                 |
+| `-c, --conf`      | 配置文件                                                                                           | 否，SubFinder 默认从~/.subfinder.json 读取。       |
+| `-s,--silence`    | 静默运行，不输出日志                                                                               | 否                                                 |
+| `--debug`         | 调试模式，输出调试日志                                                                             | 否                                                 |
+| `-h,--help`       | 显示帮助信息                                                                                       | 否                                                 |
 
-- `--exclude`, 支持的匹配模式类似于shell，`*` 匹配任意长度的字符串，`?` 匹配一个字符，`[CHARS]`匹配CHARS中的任一字符。例如：
+- `--exclude`, 支持的匹配模式类似于 shell，`*` 匹配任意长度的字符串，`?` 匹配一个字符，`[CHARS]` 匹配 CHARS 中的任一字符。例如：
 
-   - 排除包含`abc`的目录：`--exclude '*abc*/'`。注意添加单引号，防止shell对其进行扩展。
+   - 排除包含 `abc` 的目录：`--exclude '*abc*/'`。注意添加单引号，防止 shell 对其进行扩展。
 
-   - 排除包含`abc`的文件：`--exclude '*abc*'`。注意和上个例子的区别，匹配目录时结尾有`/`目录分隔符，匹配文件则没有。
+   - 排除包含 `abc` 的文件：`--exclude '*abc*'`。注意和上个例子的区别，匹配目录时结尾有 `/` 目录分隔符，匹配文件则没有。
 
 
 - `--api_urls`
 
-   [字幕库](http://www.zimuku.la)的链接不太稳定，有时候会更换域名，因此提供`--api_urls`选项自定义API URL，以防域名或链接变动。
+  [字幕库](http://www.zimuku.la) 的链接不太稳定，有时候会更换域名，因此提供 `--api_urls` 选项自定义 API URL，以防域名或链接变动。
 
-   `--api_urls`只接收JSON格式的字符串。
+  `--api_urls` 只接收 JSON 格式的字符串。
 
-   获取正确的API URL的方法：
+  获取正确的 API URL 的方法：
 
-   - 字幕库的API一般形如 http://www.zimuku.la/search， 这个URL就是网页端“搜索”功能的URL。
+  - 字幕库的 API 一般形如 http://www.zimuku.la/search， 这个 URL 就是网页端 “搜索” 功能的 URL。
 
-   - 字幕组的API一般形如 http://www.zmz2019.com/search， 这个URL同样是网页端“搜索”功能的URL。
+  - 字幕组的 API 一般形如 http://www.zmz2019.com/search， 这个 URL 同样是网页端 “搜索” 功能的 URL。
 
-   - 射手网的API比较稳定，一般不会变动。
+  - SubHD 的 API 一般形如 https://subhd.tv/search. 
 
-   配置示例：
+  - 射手网的 API 比较稳定，一般不会变动。
 
-   ```
-   {
-      // 设置字幕库的API
-      "zimuku": "http://www.zimuku.la/search",
-      // 设置字幕组的API
-      "zimuzu": "http://www.zmz2019.com/search",
-      // 设置字幕组获取字幕下载链接的API
-      "zimuzu_subtitle_api_url": "http://got001.com/api/v1/static/subtitle/detail"
-   }
-   ```
+  **如果发现字幕网站的 API URL 发生改变, 欢迎提交 issue.**
+
+  配置示例：
+
+  ```
+  {
+    // 设置字幕库的搜索 API
+    "zimuku": "http://www.zimuku.la/search",
+    // 设置字幕组的搜索 API
+    "zimuzu": "http://www.zmz2019.com/search",
+    // 设置字幕组获取字幕下载链接的 API, 注意不包含域名
+    "zimuzu_api_subtitle_download": "/api/v1/static/subtitle/detail",
+    // 设置 SubHD 的搜索 API
+    "subhd": "https://subhd.tv/search",
+    // 设置 SubHD 获取字幕下载链接的 API, 注意不包含域名
+    "subhd_api_subtitle_download": "/ajax/down_ajax",
+    // 设置 SubHD 获取字幕预览的 API, 注意不包含域名
+    "subhd_api_subtitle_preview": "/ajax/file_ajax"
+  }
+  ```
 
 支持的语言和文件格式：
 
@@ -172,6 +166,7 @@ Table of Contents
 | shooter    | ['zh', 'en']                        | ['ass', 'srt'] |
 | zimuku     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 | zimuzu     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
+| subhd      | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 
 语言代码：
 
@@ -185,27 +180,33 @@ Table of Contents
 
 ### 配置文件
 
-配置文件是JSON格式的，支持命令行中的所有选项。命令行中指定的选项优先级高于配置文件的。
+配置文件是 JSON 格式的，支持命令行中的所有选项。命令行中指定的选项优先级高于配置文件的。
 
-配置文件中的key一一对应于命令行选项，例如`-m，--method`对应的key为`method`。
+配置文件中的 key 一一对应于命令行选项，例如 `-m，--method` 对应的 key 为 `method`。
 
 示例：
 
 ```json
 {
-   "languages": ["zh", "en", "zh_chs"],
-   "exts": ["ass", "srt"],
-   "method": ["shooter", "zimuzu", "zimuku"],
-   "video_exts": [".mp4", ".mkv", ".iso"],
-   "exclude": ["excluded_path/", "*abc.mp4"],
-   "api_urls": {
-      // 设置字幕库的API
-      "zimuku": "http://www.zimuku.la/search",
-      // 设置字幕组的API
-      "zimuzu": "http://www.zmz2019.com/search",
-      // 设置字幕组获取字幕下载链接的API
-      "zimuzu_subtitle_api_url": "http://got001.com/api/v1/static/subtitle/detail"
-   }
+  "languages": ["zh", "en", "zh_chs"],
+  "exts": ["ass", "srt"],
+  "method": ["shooter", "zimuzu", "zimuku"],
+  "video_exts": [".mp4", ".mkv", ".iso"],
+  "exclude": ["excluded_path/", "*abc.mp4"],
+  "api_urls": {
+    // 设置字幕库的搜索 API
+    "zimuku": "http://www.zimuku.la/search",
+    // 设置字幕组的搜索 API
+    "zimuzu": "http://www.zmz2019.com/search",
+    // 设置字幕组获取字幕下载链接的 API, 注意不包含域名
+    "zimuzu_api_subtitle_download": "/api/v1/static/subtitle/detail",
+    // 设置 SubHD 的搜索 API
+    "subhd": "https://subhd.tv/search",
+    // 设置 SubHD 获取字幕下载链接的 API, 注意不包含域名
+    "subhd_api_subtitle_download": "/ajax/down_ajax",
+    // 设置 SubHD 获取字幕预览的 API, 注意不包含域名
+    "subhd_api_subtitle_preview": "/ajax/file_ajax"
+  }
 }
 ```
 
@@ -217,7 +218,7 @@ Table of Contents
 
 ![win_menu](assets/subfinder_menu.win.gif)
 
-**如何添加注册表：**
+** 如何添加注册表：**
 
 - 下载 [注册表文件](https://raw.githubusercontent.com/ausaki/subfinder/master/assets/subfinder.reg)，
 
@@ -236,7 +237,7 @@ Table of Contents
 - 将解压出的 subfinder.workflow 复制到 / Users/YourName/Library/Services。
 - 选中视频文件或目录，右键弹出菜单，选择 “服务（Services）” -> “查找字幕”。
 
-**注意：在 workflow 中，subfinder 的路径是 `/usr/local/bin/subfinder`。**
+** 注意：在 workflow 中，subfinder 的路径是 `/usr/local/bin/subfinder`。**
 
 如果想要了解如何配置 workerflow，可以参考:
 
@@ -249,7 +250,7 @@ Table of Contents
 
 ![subfinder_gui.win](assets/subfinder_gui.win.png)
 
-**注意**
+** 注意 **
 
 - GUI app 默认同时使用 shooter 和 zimuku 两个字幕搜索器。
 
@@ -274,105 +275,6 @@ Table of Contents
 
 - 从 zimuku 网站上下载的字幕一般都是压缩包（zip, rar）。Python 自带的 zipfile 标准库可以解压 zip 压缩包，不过解压 rar 压缩包需要操作系统安装有 unrar 工具。由于 windows 系统安装和配置 unrar 比较麻烦，subfinder 已经內建 unrar.exe 了。对于 Linux 和 macOS 系统的用户，需要自己手动使用系统包管理工具安装 unrar。
 
-## 扩展
-
-subfinder 的定位是支持第三方扩展的通用字幕查找器。
-
-### subfinder 架构
-
-**class subfinder.subfinder.SubFinder**
-
-`SubFinder` 类定义在 `subfiner/subfiner.py` 中。
-
-`SubFinder` 负责的功能有：
-
-- 收集指定目录下所有的视频文件。
-
-- 调用指定的 `SubSearcher` 查找字幕。
-
-- 下载字幕。
-
-方法：
-
-- `__init__(self, path='./', languages=None, exts=None, subsearcher_class=None, **kwargs)`
-
-  | 参数              | 介绍                                                      | 类型                                 |
-  | ----------------- | --------------------------------------------------------- | ------------------------------------ |
-  | path              | 文件名或者目录                                            | str                                  |
-  | languages         | 字幕语言， 如果为 None，则由 `subsearcher_class` 自己决定 | str or [str]                         |
-  | exts              | 字幕格式，如果为 None，则由 `subsearcher_class` 自己决定  | str or [str]                         |
-  | subsearcher_class | 字幕搜索器，默认是 `ShooterSubSearcher`                   | BaseSubSearcher or [BaseSubSearcher] |
-
-  **注意：** 如果指定了多个 `subsearcher_class`，请不要指定 `languages` 参数，否则可能会出现校验错误（LanguageError），因为每个 `SubSearcher` 支持的语言可能不相同。
-
-- `start()`
-
-  开始查找字幕
-
-- `done()`
-
-  查找字幕完成后调用，进行一些收尾工作。
-
-你基本上不用修改 `SubFinder` 类，只需要自定义 `SubSearcher` 即可。
-
-更多关于 `SubFinder` 的细节请查看源码。
-
-`SubFinder` 默认是单线程的，效率有点低，因此基于 `SubFinder` 实现了两个分别基于 gevent 和 thread 的子类。
-
-**class subfinder.subfinder_thread.SubFinderThread**
-
-`SubFinderThread` 类定义在 `subfiner/subfiner_thread.py` 中，`SubFinderThread` 重写了 `SubFinder` 的 `_init_pool` 方法，使用线程池去查找字幕和下载字幕。
-
-**class subfinder.subfinder_gevent.SubFinderGevent**
-
-`SubFinderGevent` 类定义在 `subfiner/subfiner_gevent.py` 中，`SubFinderGevent` 重写了 `SubFinder` 的 `_init_pool` 方法，使用协程池去查找字幕和下载字幕。
-
-如果使用 `SubFinderGevent` ，需要在你的入口文件的第一行进行 patch:
-
-    `from gevent import monkey;monkey.patch_all()`
-
-**class subfinder.subsearcher.SubSearcher**
-
-`SubSearcher` 类定义在 `subfinder/subsearcher.py 中 `，`SubSearcher` 负责查找字幕。
-
-类属性：
-
-- `SUPPORT_LANGUAGES`， 支持的字幕语言， 如 chn、eng。`SUPPORT_LANGUAGES` 用于检查命令行的 `languages` 参数是否合法。
-
-- `SUPPORT_EXTS`， 支持的字幕格式，如 ass、srt。`SUPPORT_EXTS` 用于检查命令行的 `exts` 参数是否合法。
-
-方法：
-
-- `search_subs(self, videofile, languages=None, exts=None, **kwargs)`， 查找字幕。
-
-  | 参数      | 介绍                 | 类型         |
-  | --------- | -------------------- | ------------ |
-  | videofile | 视频文件名的绝对路径 | str          |
-  | languages | 字幕语言             | str or [str] |
-  | exts      | 字幕格式             | str or [str] |
-
-  返回字幕信息列表，字幕信息的格式: `{'link': LINK, 'language': LANGUAGE, 'subname': SUBNAME,'ext': EXT, 'downloaded': False}`。
-
-  格式：
-
-  | 字段       | 介绍                                                                                                                                                           | 类型         |
-  | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ |
-  | link       | 字幕文件下载地址，可选，取决于 `downloaded`，如果 `downloaded` 为 False，则必须提供                                                                            | str          |
-  | language   | 字幕语言                                                                                                                                                       | str or [str] |
-  | exts       | 字幕格式                                                                                                                                                       | str or [str] |
-  | subname    | 字幕文件名，可选，取决于 `downloaded`，如果 `downloaded` 为 False，则必须提供                                                                                  | str or [str] |
-  | downloaded | `SubSearcher` 是否已经下载好了字幕。如果为 True，表示 `SubSearcher` 已经下载了字幕，那么 `SubFinder` 将不会下载字幕，否者 `SubFinder` 会根据 `link` 下载字幕。 | bool         |
-
-### 自定义字幕搜索器
-
-为了实现你自己的字幕搜索器，你需要：
-
-- 创建一个继承自 `BaseSubSearcher` 的类，实现 `search_subs` 方法，重写 `SUPPORT_LANGUAGES` 和 `SUPPORT_EXTS` 属性。
-
-- 注册你自己的 `SubSeacher` 类。
-
-这里有一个自定义字幕搜索器的 [示例文件](examples/custom_subsearcher.py)。
-
 ## 贡献
 
 在使用过程中遇到任何问题，请提交 issue。
@@ -391,14 +293,26 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 ## 更新历史
 
+### v1.1.3
+
+- 将参数 `--repeat` 修改为 `--ignore`.
+
+- 添加新参数 `-k, --keyword`.
+
+- 支持 SubHD. SubHD 在下载字幕时经常弹出验证码, 无法通过正常的API获取到字幕的下载链接, 目前的做法是通过 SubHD 的字幕预览功能获取字幕.
+
+- 修复一些 bug.
+
+- 注意: 配置文件中的一些配置项修改了名字, 具体查看文档.
+  
 ### v1.1.2
 
-- 修复 zimuzu 无法正常解析网页的问题(因为 zimuzu 的网页结构发生了改变).
-  
+- 修复 zimuzu 无法正常解析网页的问题 (因为 zimuzu 的网页结构发生了改变).
+
 ### v1.1.1
 
 - 修复 subsearcher 的一个 bug.
-  
+
 ### v1.1.0
 
 - 使用 poetry 包管理器.
@@ -411,7 +325,7 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 - 支持用户配置文件
 
-- 支持用户自定义字幕组和字幕库的API URL。
+- 支持用户自定义字幕组和字幕库的 API URL。
 
 - 支持用户自定义视频文件的后缀。
 
@@ -429,11 +343,11 @@ subfinder 的定位是支持第三方扩展的通用字幕查找器。
 
 - 优化了 subsearcher。
 
-- 添加--debug选项，方便显示调试信息。
+- 添加 --debug 选项，方便显示调试信息。
 
 ### v1.0.5
 
-- 修复命令行参数`-l`，`-e`的问题。
+- 修复命令行参数 `-l`，`-e` 的问题。
 
 ### v1.0.4
 

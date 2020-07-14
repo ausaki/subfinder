@@ -165,18 +165,45 @@ class BaseSubSearcher(object):
             info['title'] = videoname[:i] if i > 0 else videoname
 
         return info
+    
+    @classmethod
+    def _gen_keyword(cls, videoinfo):
+        """ 获取关键词
+        """
+        keyword = videoinfo.get('title')
+        if videoinfo['season'] != 0:
+            keyword += '.S{:02d}'.format(videoinfo['season'])
+        if videoinfo['episode'] != 0:
+            keyword += '.E{:02d}'.format(videoinfo['episode'])
+        # replace space with '+'
+        keyword = re.sub(r'\s+', ' ', keyword)
+        return keyword
 
     @classmethod
-    def _gen_subname(cls, videofile, language, ext, **kwargs):
-        """ 生成字幕文件名
-        """
-        root, basename = os.path.split(videofile)
-        name, _ = os.path.splitext(basename)
-        subname = '{basename}.{language}.{ext}'.format(
-            basename=name,
+    def _gen_subname(cls, videofile, origin_file, language=None, ext=None):
+        if not language:
+            language_ = []
+            try:
+                for l in cls.COMMON_LANGUAGES:
+                    if origin_file.find(l) >= 0:
+                        language_.append(l)
+            except Exception:
+                pass
+            language = '&'.join(language_)
+        if language and not language.startswith('.'):
+            language = '.' + language
+
+        basename = os.path.basename(videofile)
+        basename, _ = os.path.splitext(basename)
+        if not ext:
+            _, ext = os.path.splitext(origin_file)
+        if not ext.startswith('.'):
+            ext = '.' + ext
+
+        return '{basename}{language}{ext}'.format(
+            basename=basename,
             language=language,
             ext=ext)
-        return subname
 
     @classmethod
     def _extract(cls, compressed_file, videofile, exts):
@@ -193,12 +220,12 @@ class BaseSubSearcher(object):
             if cf.isdir(name):
                 continue
             # make `name` to unicode string
-            orig_name = CompressedFile.decode_file_name(name)
-            _, ext = os.path.splitext(orig_name)
+            origin_file = CompressedFile.decode_file_name(name)
+            _, ext = os.path.splitext(origin_file)
             ext = ext[1:]
             if ext not in exts:
                 continue
-            subname = cls._gen_subname(videofile, '', '', orig_name=orig_name)
+            subname = cls._gen_subname(videofile, origin_file)
             subpath = os.path.join(root, subname)
             cf.extract(name, subpath)
             subs.append(subpath)
@@ -299,7 +326,7 @@ class BaseSubSearcher(object):
 
         return filepath, referer
 
-    def _search_subs(self, videofile, languages, exts):
+    def _search_subs(self, videofile, languages, exts, keyword=None):
         """ search subtitles of videofile.
 
         `videofile` is the absolute(or relative) path of the video file.
@@ -309,6 +336,8 @@ class BaseSubSearcher(object):
 
         `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
         depende on implemention of subclass. `ext` accepts one ext or a list of ext
+
+        `keyword` is used to searching on the subtitle website.
 
         return a list of subtitle info
         [
@@ -338,7 +367,7 @@ class BaseSubSearcher(object):
         """
         return []
 
-    def search_subs(self, videofile, languages=None, exts=None):
+    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
         if languages is None:
             languages = self.SUPPORT_LANGUAGES
         elif isinstance(languages, str):
@@ -351,7 +380,7 @@ class BaseSubSearcher(object):
             exts = [exts]
         self._check_exts(exts)
 
-        return self._search_subs(videofile, languages, exts)
+        return self._search_subs(videofile, languages, exts, keyword)
 
     def __str__(self):
         if hasattr(self.__class__, 'shortname'):

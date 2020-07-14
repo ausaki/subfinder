@@ -48,8 +48,10 @@ class SubFinder(object):
         if 'video_exts' in kwargs:
             video_exts = set(kwargs.get('video_exts'))
             self.video_exts.update(video_exts)
-        # repeat
-        self.repeat = kwargs.get('repeat', False)
+        # keyword
+        self.keyword = kwargs.get('keyword')
+        # ignore
+        self.ignore = kwargs.get('ignore', False)
         # exclude
         self.exclude = kwargs.get('exclude', [])
 
@@ -67,7 +69,7 @@ class SubFinder(object):
 
         # api urls
         api_urls = kwargs.get('api_urls', {})
-
+        
         for sc in subsearcher_class:
             self.subsearcher.append(sc(self, api_urls=api_urls))
 
@@ -105,7 +107,7 @@ class SubFinder(object):
         """ 筛选出 path 目录下所有的视频文件
         """
         if self._is_videofile(path):
-            if not self.repeat and self._has_subtitles(path):
+            if not self.ignore and self._has_subtitles(path):
                 return
             yield path
             return
@@ -120,7 +122,7 @@ class SubFinder(object):
                     continue
                 if self._fnmatch(filename):
                     continue
-                if not self.repeat and self._has_subtitles(filepath):
+                if not self.ignore and self._has_subtitles(filepath):
                     continue
                 yield filepath
 
@@ -170,7 +172,7 @@ class SubFinder(object):
                 '{0}：开始使用 {1} 搜索字幕'.format(basename, subsearcher))
             try:
                 subinfos = subsearcher.search_subs(
-                    videofile, self.languages, self.exts)
+                    videofile, self.languages, self.exts, self.keyword)
             except Exception as e:
                 err = str(e)
                 if self.debug:
@@ -210,8 +212,11 @@ class SubFinder(object):
         """ SubFinder 入口，开始函数
         """
         self.logger.info('开始')
-        videofiles = self._filter_path(self.path)
-        # l = len(videofiles)
+        videofiles = list(self._filter_path(self.path))
+        l = len(videofiles)
+        if l > 1 and self.keyword:
+            self.logger.warn('`keyword` should used only when there is one video file, but there is {} video files'.format(l))
+            return
         for f in videofiles:
             self._history[f] = []
             self.pool.spawn(self._download, f)

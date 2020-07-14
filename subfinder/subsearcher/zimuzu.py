@@ -32,26 +32,8 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     def __init__(self, subfinder, **kwargs):
         super(ZimuzuSubSearcher, self).__init__(subfinder, **kwargs)
         self.SUB_TITLE_API_URL = self.api_urls.get(
-            'zimuzu_subtitle_api_url', self.__class__.SUB_TITLE_API_URL)
+            'zimuzu_api_subtitle', self.__class__.SUB_TITLE_API_URL)
 
-    @classmethod
-    def _gen_subname(cls, videofile, language, ext, **kwargs):
-        language = []
-        orig_subname = kwargs.get('orig_name')
-        try:
-            for l in cls.COMMON_LANGUAGES:
-                if orig_subname.find(l) >= 0:
-                    language.append(l)
-        except Exception:
-            pass
-        language = '&'.join(language)
-        basename = os.path.basename(videofile)
-        basename, _ = os.path.splitext(basename)
-        _, ext = os.path.splitext(orig_subname)
-        return '{basename}.{language}{ext}'.format(
-            basename=basename,
-            language=language,
-            ext=ext)
 
     def _parse_search_result_html(self, doc):
         """
@@ -177,7 +159,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         headers = {'Referer': referer}
         res = self.session.get(downloadpage_link, headers=headers)
         referer = res.url
-        # doc = res.content
+        doc = res.text
         # download_link = self._parse_downloadpage_html(doc)
         parts = urlparse.urlparse(downloadpage_link)
         query = urlparse.parse_qs(parts.query)
@@ -186,8 +168,13 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             code = code[0]
         else:
             return '', referer
-        json_res = self.session.get(
-            self.SUB_TITLE_API_URL, params={'code': code})
+        # parse api url for real downloadable url
+        subtitle_api_url = self.SUB_TITLE_API_URL
+        pattern = r'(/api/v{\d}+/static/subtitle/detail\?code=)'
+        match = re.search(pattern, doc)
+        if match:
+            subtitle_api_url = match.group(1)
+        json_res = self.session.get(subtitle_api_url, params={'code': code})
         data = json_res.json()
         download_link = data['data']['info']['file']
         return download_link, referer
@@ -204,11 +191,13 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         keyword = re.sub(r'\s+', '+', keyword)
         return keyword
 
-    def _search_subs(self, videofile, languages, exts):
+    def _search_subs(self, videofile, languages, exts, keyword=None):
         videoname = self._get_videoname(videofile)
         videoinfo = self._parse_videoname(videoname)
-        keyword = self._get_keyword(videoinfo)
-
+        if keyword is None:
+            keyword = self._get_keyword(videoinfo)
+        
+        self._debug('keyword: {}'.format(keyword))
         self._debug('videoinfo: {}'.format(videoinfo))
 
         # try find subinfo_list from self._cache

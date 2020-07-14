@@ -29,24 +29,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
     _cache = {}
     shortname = 'zimuku'
 
-    @classmethod
-    def _gen_subname(cls, videofile, language, ext, **kwargs):
-        language = []
-        orig_subname = kwargs.get('orig_name')
-        try:
-            for l in cls.COMMON_LANGUAGES:
-                if orig_subname.find(l) >= 0:
-                    language.append(l)
-        except Exception:
-            pass
-        language = '&'.join(language)
-        basename = os.path.basename(videofile)
-        basename, _ = os.path.splitext(basename)
-        _, ext = os.path.splitext(orig_subname)
-        return '{basename}.{language}{ext}'.format(
-            basename=basename,
-            language=language,
-            ext=ext)
 
     def _parse_downloadcount(self, text):
         """ parse download count
@@ -163,6 +145,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         referer = res.url
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
+            self._debug('no subgroups')
             return [], referer                   
         subgroup = self._filter_subgroup(subgroups)
 
@@ -212,12 +195,11 @@ class ZimukuSubSearcher(BaseSubSearcher):
         download_link = self._join_url(res.url, download_link)
         return download_link, referer
 
-    def _search_subs(self, videofile, languages, exts):
+    def _search_subs(self, videofile, languages, exts, keyword=None):
         videoname = self._get_videoname(videofile)  # basename, not include ext
         videoinfo = self._parse_videoname(videoname)
-        keyword = videoinfo.get('title')
-        if videoinfo['season'] != 0:
-            keyword += ' S{:02d}'.format(videoinfo['season'])
+        if keyword is None:
+            keyword = self._gen_keyword(videoinfo)
 
         self._debug('keyword: {}'.format(keyword))
         self._debug('videoinfo: {}'.format(videoinfo))
