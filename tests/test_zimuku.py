@@ -3,6 +3,9 @@
 
 from __future__ import unicode_literals, print_function
 import os
+import pathlib
+from tests.test_subfinder import videofile
+import subfinder
 import pytest
 from subfinder.subsearcher import ZimukuSubSearcher
 from subfinder.subfinder import SubFinder
@@ -19,13 +22,13 @@ def zimuku():
 def test_languages(zimuku):
     zimuku._check_languages(['zh_chs'])
     with pytest.raises(LanguageError):
-        zimuku._check_languages(['Lang'])
+        zimuku._check_languages(['fake_lang'])
 
 
 def test_exts(zimuku):
     zimuku._check_exts(['ass'])
     with pytest.raises(ExtError):
-        zimuku._check_exts(['Ext'])
+        zimuku._check_exts(['fake_ext'])
 
 
 def test_parse_download_count(zimuku):

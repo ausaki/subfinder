@@ -17,10 +17,10 @@ def zimuzu():
 def test_languages(zimuzu):
     zimuzu._check_languages(['zh_chs'])
     with pytest.raises(LanguageError):
-        zimuzu._check_languages(['Lang'])
+        zimuzu._check_languages(['fake_lang'])
 
 
 def test_exts(zimuzu):
     zimuzu._check_exts(['ass'])
     with pytest.raises(ExtError):
-        zimuzu._check_exts(['Ext'])
+        zimuzu._check_exts(['fake_ext'])
