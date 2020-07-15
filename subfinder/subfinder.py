@@ -107,6 +107,8 @@ class SubFinder(object):
         """ 筛选出 path 目录下所有的视频文件
         """
         if self._is_videofile(path):
+            if self._fnmatch(os.path.basename(path)):
+                return
             if not self.ignore and self._has_subtitles(path):
                 return
             yield path

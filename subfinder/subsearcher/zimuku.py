@@ -11,18 +11,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
-    LANGUAGES_MAP = {
-        '简体中文字幕': 'zh_chs',
-        '简体中文': 'zh_chs',
-        '繁體中文字幕': 'zh_cht',
-        '繁體中文': 'zh_cht',
-        'English字幕': 'en',
-        'English': 'en',
-        'english': 'en',
-        '双语字幕': 'zh_en',
-        '双语': 'zh_en'
-    }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'http://www.zimuku.la/search/'
 
@@ -60,15 +48,16 @@ class ZimukuSubSearcher(BaseSubSearcher):
         if not ele_divs:
             return subgroups
         for item in ele_divs:
+            info = {'title': '', 'link': '', 'sublist': []}
             ele_a = item.select('p.tt > a')
             if not ele_a:
                 continue
-            link = ele_a[0].get('href')
-            title = ele_a[0].get_text().strip()
-            subgroups.append({
-                'title': title,
-                'link': link,
-            })
+            info['link'] = ele_a[0].get('href')
+            info['title'] = ele_a[0].get_text().strip()
+            sublist = item.select('div.sublist > table td.first > a')
+            if sublist:
+                info['sublist'] = [sub['title'] for sub in sublist]
+            subgroups.append(info)
         return subgroups
 
     def _parse_sublist_html(self, doc):
@@ -133,22 +122,31 @@ class ZimukuSubSearcher(BaseSubSearcher):
         """
         if not subgroups:
             return None
-        return subgroups[0]
+        videoinfo = self.videoinfo
+        season = videoinfo['season']
+        if season == 0:
+            return subgroups[0]['link']
+        for sg in subgroups:
+            title = sg['title']
+            sublist = sg['sublist']
+            for sub in sublist:
+                videoinfo_ = self._parse_videoname(sub)
+                season_ = videoinfo_['season']
+                if season == season_:
+                    return sg['link']
+        return subgroups[0]['link']
 
     def _try_js_redirect(self, doc):
-        print(doc)
-        pattern = r'url\s*=\s*[\'"]([^;\'"]+?)[\'"]\s*\+\s*url;' 
+        pattern = r'url\s*=\s*[\'"]([^;\'"]+?)[\'"]\s*\+\s*url;'
         matches = re.findall(pattern, doc)
-        print(matches)
         path = ''.join(reversed(matches))
-        print(path)
         return path
 
-    def _get_subinfo_list(self):
+    def _get_subinfo_list(self, keyword):
         """ return subinfo_list of videoname
         """
         # searching subtitles
-        res = self.session.get(self.API_URL, params={'q': self.keyword}, headers={'Referer': self.referer})
+        res = self.session.get(self.API_URL, params={'q': keyword}, headers={'Referer': self.referer})
         doc = res.text
         self.referer = res.url
         subgroups = self._parse_search_results_html(doc)
@@ -159,20 +157,18 @@ class ZimukuSubSearcher(BaseSubSearcher):
                 self._debug('no luck, can\'t find any js redirect url')
                 return []
             redirect_url = self._join_url(self.referer, redirect_url)
-            print(redirect_url)
             res = self.session.get(redirect_url, headers={'Referer': self.referer})
             doc = res.text
             self.referer = res.url
-            print(doc)
             subgroups = self._parse_search_results_html(doc)
             if not subgroups:
                 self._debug('last try, no subgroups')
                 return []
-        
-        subgroup = self._filter_subgroup(subgroups)
 
+        subtitle_url = self._filter_subgroup(subgroups)
+        subtitle_url = self._join_url(self.API_URL, subtitle_url)
         # get subtitles
-        res = self.session.get(self._join_url( self.API_URL, subgroup['link']), headers={'Referer': self.referer})
+        res = self.session.get(subtitle_url, headers={'Referer': self.referer})
         doc = res.text
         self.referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
@@ -181,7 +177,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         return subinfo_list
 
     def _visit_detailpage(self, detailpage_link):
-        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
+        res = self.session.get(detailpage_link, headers={'Referer': self.referer})
         doc = res.text
         self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
@@ -208,15 +204,14 @@ class ZimukuSubSearcher(BaseSubSearcher):
         return download_link
 
     def _search_subs(self):
-        # try find subinfo_list from self._cache
-        if self.keyword not in self._cache:
-            subinfo_list = self._get_subinfo_list()
-            self._cache[self.keyword] = (subinfo_list, self.referer)
-        else:
-            subinfo_list = self._cache.get(self.keyword)
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-        subinfo = self._filter_subinfo_list(subinfo_list)
-        self._debug('subinfo: {}'.format(subinfo))
+        subinfo = None
+        for keyword in self.keywords:
+            subinfo_list = self._get_subinfo_list(keyword)
+            self._debug('subinfo_list: {}'.format(subinfo_list))
+            subinfo = self._filter_subinfo_list(subinfo_list)
+            self._debug('subinfo: {}'.format(subinfo))
+            if subinfo:
+                break
         if not subinfo:
             return []
 
@@ -224,7 +219,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
         self._debug('downloadpage_link: {}'.format(downloadpage_link))
         subtitle_download_link = self._visit_downloadpage(downloadpage_link)
         self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
-        filepath = self._download_subs( subtitle_download_link, subinfo['title'])
+        filepath = self._download_subs(subtitle_download_link, subinfo['title'])
         self._debug('filepath: {}'.format(filepath))
         subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
@@ -235,4 +230,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
             'ext': subinfo['exts'],
             'subname': subs,
             'downloaded': True
-        }]
+        }] if subs else []

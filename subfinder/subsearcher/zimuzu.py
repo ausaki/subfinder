@@ -14,13 +14,6 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        '英文': 'en',
-        '中英': 'zh_en',
-    }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'http://www.rrys2020.com/search/index'
     API_SUBTITLE_DOWNLOAD = '/api/v1/static/subtitle/detail'
@@ -77,25 +70,12 @@ class ZimuzuSubSearcher(BaseSubSearcher):
     def _parse_detailpage_html(self, doc):
         """ 解析字幕详情页面
         """
-        result = {
-            'exts': [],
-            'downloadpage_link': ''
-        }
         soup = bs4.BeautifulSoup(doc, 'lxml')
-        li_list = soup.select('ul.subtitle-info > li')
-        for li in li_list:
-            if li.string and '【格式】' in li.string:
-                s = li.string.lower()
-                for ext in self.SUPPORT_EXTS:
-                    if ext in s:
-                        result['exts'].append(ext)
-
         a = soup.select('.subtitle-links > a')
         if a:
             a = a[0]
-            result['downloadpage_link'] = a.get('href')
-
-        return result
+            return a.get('href')
+        return ''
 
     def _parse_downloadpage_html(self, doc):
         """ 解析下载页面，返回下载链接
@@ -126,10 +106,10 @@ class ZimuzuSubSearcher(BaseSubSearcher):
 
         return result
 
-    def _get_subinfo_list(self):
+    def _get_subinfo_list(self, keyword):
         """根据关键词搜索，返回字幕信息列表
         """
-        res = self.session.get(self.API_URL, params={'keyword': self.keyword, 'type': 'subtitle'})
+        res = self.session.get(self.API_URL, params={'keyword': keyword, 'type': 'subtitle'})
         doc = res.content
         self.referer = res.url
         subinfo_list = self._parse_search_result_html(doc)
@@ -173,28 +153,17 @@ class ZimuzuSubSearcher(BaseSubSearcher):
 
     def _search_subs(self):
         # try find subinfo_list from self._cache
-        if self.keyword not in self._cache:
-            subinfo_list = self._get_subinfo_list()
-            self._cache[self.keyword] = (subinfo_list, self.referer)
-        else:
-            subinfo_list, self.referer = self._cache.get(self.keyword)
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-        # 初步过滤掉无关的字幕
-        subinfo_list = self._first_filter_subinfo_list(subinfo_list)
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-
-        # 补全字幕信息中的 exts 字段
-        for subinfo in subinfo_list:
-            detail_info = self._visit_detailpage(subinfo['link'])
-            subinfo['exts'] = detail_info['exts']
-
-        subinfo = self._filter_subinfo_list(subinfo_list)
-        self._debug('subinfo: {}'.format(subinfo))
+        subinfo = None
+        for keyword in self.keywords:
+            subinfo_list = self._get_subinfo_list(keyword)
+            subinfo = self._filter_subinfo_list(subinfo_list)
+            self._debug('subinfo: {}'.format(subinfo))
+            if subinfo:
+                break
         if not subinfo:
             return []
 
-        detail_info = self._visit_detailpage(subinfo['link'])
-        downloadpage_link = detail_info['downloadpage_link']
+        downloadpage_link = self._visit_detailpage(subinfo['link'])
         self._debug('downloadpage_link: {}'.format(downloadpage_link))
         download_link = self._visit_downloadpage(downloadpage_link)
         self._debug('download_link: {}'.format(download_link))
@@ -209,4 +178,4 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             'ext': subinfo['exts'],
             'subname': subs,
             'downloaded': True
-        }]
+        }] if subs else []

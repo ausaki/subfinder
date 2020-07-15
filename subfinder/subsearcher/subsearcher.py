@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 from abc import abstractmethod, ABCMeta
 import os
+from os.path import join
 import re
 import cgi
 try:
@@ -55,6 +56,20 @@ class BaseSubSearcher(object):
 
     SUPPORT_LANGUAGES = []
     SUPPORT_EXTS = []
+    LANGUAGES_MAP = {
+        '简体': 'zh_chs',
+        '繁體': 'zh_cht',
+        'English': 'en',
+        'english': 'en',
+        '英文': 'en',
+        '双语': 'zh_en',
+        '中英': 'zh_en',
+    }
+    COMMON_LANGUAGES = ['简体', '繁体', '英文']
+
+    API_URL = ''
+
+    shortname = 'base_subsearcher'
 
     def __init__(self, subfinder,  **kwargs):
         """
@@ -65,13 +80,14 @@ class BaseSubSearcher(object):
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
         self.subfinder = subfinder
         self.api_urls = kwargs.get('api_urls', {})
-        self.API_URL = self.api_urls.get(
-            self.shortname, self.__class__.API_URL)
+        self.API_URL = self.api_urls.get(self.shortname, self.__class__.API_URL)
+
         self.languages = ''
         self.exts = ''
         self.videofile = ''
         self.videoname = ''
         self.videoinfo = {}
+        self.keywords = []
         self.referer = ''
 
     def _debug(self, msg):
@@ -175,14 +191,19 @@ class BaseSubSearcher(object):
     def _gen_keyword(cls, videoinfo):
         """ 获取关键词
         """
-        keyword = videoinfo.get('title')
-        if videoinfo['season'] != 0:
-            keyword += '.S{:02d}'.format(videoinfo['season'])
-        if videoinfo['episode'] != 0:
-            keyword += '.E{:02d}'.format(videoinfo['episode'])
-        # replace space with '+'
-        keyword = re.sub(r'\s+', ' ', keyword)
-        return keyword
+        separators = ['.', ' ']
+        keywords = []
+        for sep in separators:
+            keyword = [videoinfo.get('title')]
+            if videoinfo['season'] != 0:
+                keyword.append('S{:02d}'.format(videoinfo['season']))
+            if videoinfo['episode'] != 0:
+                keyword.append('E{:02d}'.format(videoinfo['episode']))
+            # replace space with ''
+            keyword_str = sep.join(keyword)
+            keyword_str = re.sub(r'\s+', ' ', keyword_str)
+            keywords.append(keyword_str)
+        return keywords
 
     def _gen_subname(self, origin_file, language=None, ext=None):
         if not language:
@@ -226,7 +247,7 @@ class BaseSubSearcher(object):
             origin_file = CompressedFile.decode_file_name(name)
             _, ext = os.path.splitext(origin_file)
             ext = ext[1:]
-            if ext not in self.exts:
+            if self.exts and ext not in self.exts:
                 continue
             subname = self._gen_subname(origin_file)
             subpath = os.path.join(root, subname)
@@ -254,8 +275,15 @@ class BaseSubSearcher(object):
         ]
         videoinfo = self.videoinfo
         filtered_subinfo_list = dict((f, []) for f in filter_field_list)
-
+        languages = set(self.languages)
+        exts = set(self.exts)
         for subinfo in subinfo_list:
+            languages_ = subinfo.get('languages')
+            exts_ = subinfo.get('exts')
+            if languages_ and not (languages & set(languages_)):
+                continue
+            if exts_ and not (exts & set(exts_)):
+                continue
             title = subinfo.get('title')
             videoinfo_ = self._parse_videoname(title)
             last_field = None
@@ -276,11 +304,8 @@ class BaseSubSearcher(object):
             if len(filtered_subinfo_list[field]) > 0:
                 # sort by download_count and rate
                 sorted_subinfo_list = sorted(filtered_subinfo_list[field],
-                                             key=lambda item: (
-                    item['rate'], item['download_count']),
-                    reverse=True)
+                                             key=lambda item: (item['rate'], item['download_count']), reverse=True)
                 return sorted_subinfo_list[0]
-        return {}
 
     def _download_subs(self, download_link, subtitle):
         """ 下载字幕
@@ -326,6 +351,7 @@ class BaseSubSearcher(object):
         res.close()
         return filepath
 
+    @abstractmethod
     def _search_subs(self):
         """
         subclass should implement this private method.
@@ -387,9 +413,11 @@ class BaseSubSearcher(object):
         self.videoname = self._get_videoname(videofile)  # basename, not include ext
         self.videoinfo = self._parse_videoname(self.videoname)
         if keyword is None:
-            keyword = self._gen_keyword(self.videoinfo)
-        self.keyword = keyword
-        self._debug('keyword: {}'.format(keyword))
+            keywords = self._gen_keyword(self.videoinfo)
+        else:
+            keywords = [keyword]
+        self.keywords = keywords
+        self._debug('keywords: {}'.format(keywords))
         self._debug('videoinfo: {}'.format(self.videoinfo))
         return self._search_subs()
 

@@ -1,4 +1,5 @@
 import os
+import pathlib
 import urllib
 import bs4
 from .subsearcher import BaseSubSearcher
@@ -9,13 +10,6 @@ class SubHDSubSearcher(BaseSubSearcher):
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        '英文': 'en',
-        '双语': 'zh_en'
-    }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'https://subhd.tv/search/'
     API_SUBTITLE_DOWNLOAD = '/ajax/down_ajax'
@@ -142,7 +136,12 @@ class SubHDSubSearcher(BaseSubSearcher):
         for a in  a_list:
             s = a.string.strip()
             if s == '预览':
-                files.append((a.get('data-sid'), a.get('data-fname')))
+                sid = a.get('data-sid')
+                fname = a.get('data-fname')
+                ext = pathlib.PurePath(fname).suffix
+                ext = ext[1:]
+                if ext in self.exts:
+                    files.append((sid, fname))
         
         for sid, fname in files:
             params = {'dasid': sid, 'dafname': fname}
@@ -163,29 +162,26 @@ class SubHDSubSearcher(BaseSubSearcher):
         return subs
 
     def _search_subs(self):
-        # try find subinfo_list from self._cache
-        if self.keyword not in self._cache:
-            subinfo_list = self._get_subinfo_list(self.keyword)
-            self._cache[self.keyword] = (subinfo_list, self.referer)
-        else:
-            subinfo_list, self.referer = self._cache.get(self.keyword)
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-        subinfo = self._filter_subinfo_list(subinfo_list)
-        self._debug('subinfo: {}'.format(subinfo))
+        subinfo = None
+        for keyword in self.keywords:
+            subinfo_list = self._get_subinfo_list(keyword)
+            self._debug('subinfo_list: {}'.format(subinfo_list))
+            subinfo = self._filter_subinfo_list(subinfo_list)
+            self._debug('subinfo: {}'.format(subinfo))
+            if subinfo:
+                break
         if not subinfo:
             return []
-
+        
         subtitle_download_link = self._visit_detailpage( subinfo['link'])
         self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
-        
         subs = None
         if not subtitle_download_link:
             subs = self._try_preview_subs(subinfo['link'])
         else:
-            filepath, referer = self._download_subs(subtitle_download_link, subinfo['title'])
+            filepath = self._download_subs(subtitle_download_link, subinfo['title'])
             self._debug('filepath: {}'.format(filepath))
             subs = self._extract(filepath)
-
         self._debug('subs: {}'.format(subs))
 
         return [{
