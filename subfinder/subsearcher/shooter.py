@@ -19,16 +19,16 @@ class ShooterSubSearcher(BaseSubSearcher):
         'en': 'Eng'
     }
 
-    def _search_subs(self, videofile, languages, exts, keyword=None):
-        filehash = self._compute_video_hash(videofile)
-        root, basename = os.path.split(videofile)
+    def _search_subs(self):
+        filehash = self._compute_video_hash(self.videofile)
+        root, basename = os.path.split(self.videofile)
         payload = {'filehash': filehash,
                    'pathinfo': basename,
                    'format': 'json',
                    'lang': ''}
 
         result = {}
-        for language in languages:
+        for language in self.languages:
             payload['lang'] = self.SHOOTER_LANGUAGES_MAP.get(language)
             res = self.session.post(self.API_URL, data=payload)
             if res.status_code == requests.codes.ok:
@@ -48,11 +48,11 @@ class ShooterSubSearcher(BaseSubSearcher):
                     ext_ = item['Ext']
                     ext_ = ext_.lower()
                     link = item['Link']
-                    if ext_ in exts and ext_ not in ext_set:
+                    if ext_ in self.exts and ext_ not in ext_set:
                         subinfos.append({
                             'link': link,
                             'language': language,
-                            'subname': self._gen_subname(videofile, language, ext_),
+                            'subname': self._gen_subname(self.videofile, language, ext_),
                             'ext': ext_,
                             'downloaded': False
                         })

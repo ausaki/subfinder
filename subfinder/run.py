@@ -45,18 +45,18 @@ def epilog():
 
 def run(subfinder_class):
     parser = argparse.ArgumentParser(prog='subfinder',
-                                     description='A general subfinder, support for custom subsearcher',
+                                     description='A general subfinder, support custom subsearcher',
                                      epilog=epilog(),
                                      formatter_class=argparse.RawDescriptionHelpFormatter,
                                      )
     parser.add_argument(
-        'path', help="the video's filename or the directory contains vedio files")
+        'path', help="the path of video file, or the directory contains video files")
     parser.add_argument('-l', '--languages',
                         nargs='+',
-                        help="what's languages of subtitle you want to find")
+                        help="specify what subtitle languages you want")
     parser.add_argument('-e', '--exts',
                         nargs='+',
-                        help="what's formats of subtitle you want to find")
+                        help="specify what subtitle formats you want")
     parser.add_argument('-m', '--method',
                         nargs='+', type=find_method,
                         help=method_msg())
@@ -72,7 +72,7 @@ def run(subfinder_class):
                         help='search subtitles even there are existing subtitles')
     parser.add_argument('-x', '--exclude',
                         nargs='+',
-                        help='exclude files and directorys')
+                        help='exclude files and directorys, support glob mode like shell, e.g *, ?')
     parser.add_argument('--api_urls',
                         type=json.loads,
                         help="specify the api urls with JSON")

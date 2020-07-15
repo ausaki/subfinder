@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals, print_function
 import re
+from re import match
 import bs4
 from .subsearcher import BaseSubSearcher
 
@@ -27,7 +28,6 @@ class ZimukuSubSearcher(BaseSubSearcher):
 
     _cache = {}
     shortname = 'zimuku'
-
 
     def _parse_downloadcount(self, text):
         """ parse download count
@@ -135,56 +135,69 @@ class ZimukuSubSearcher(BaseSubSearcher):
             return None
         return subgroups[0]
 
-    def _get_subinfo_list(self, videoname):
+    def _try_js_redirect(self, doc):
+        print(doc)
+        pattern = r'url\s*=\s*[\'"]([^;\'"]+?)[\'"]\s*\+\s*url;' 
+        matches = re.findall(pattern, doc)
+        print(matches)
+        path = ''.join(reversed(matches))
+        print(path)
+        return path
+
+    def _get_subinfo_list(self):
         """ return subinfo_list of videoname
         """
         # searching subtitles
-        res = self.session.get(self.API_URL, params={'q': videoname})
+        res = self.session.get(self.API_URL, params={'q': self.keyword}, headers={'Referer': self.referer})
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         subgroups = self._parse_search_results_html(doc)
         if not subgroups:
-            self._debug('no subgroups')
-            return [], referer                   
+            self._debug('no subgroups, maybe js redirect')
+            redirect_url = self._try_js_redirect(doc)
+            if not redirect_url:
+                self._debug('no luck, can\'t find any js redirect url')
+                return []
+            redirect_url = self._join_url(self.referer, redirect_url)
+            print(redirect_url)
+            res = self.session.get(redirect_url, headers={'Referer': self.referer})
+            doc = res.text
+            self.referer = res.url
+            print(doc)
+            subgroups = self._parse_search_results_html(doc)
+            if not subgroups:
+                self._debug('last try, no subgroups')
+                return []
+        
         subgroup = self._filter_subgroup(subgroups)
 
         # get subtitles
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(self._join_url(
-            self.API_URL, subgroup['link']), headers=headers)
+        res = self.session.get(self._join_url( self.API_URL, subgroup['link']), headers={'Referer': self.referer})
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
         for subinfo in subinfo_list:
             subinfo['link'] = self._join_url(res.url, subinfo['link'])
-        return subinfo_list, referer
+        return subinfo_list
 
-    def _visit_detailpage(self, detailpage_link, referer):
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(detailpage_link, headers=headers)
-        doc = res.content
-        referer = res.url
+    def _visit_detailpage(self, detailpage_link):
+        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
+        doc = res.text
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         ele_a_list = soup.select('a#down1')
         if not ele_a_list:
             return None
         ele_a = ele_a_list[0]
         downloadpage_link = self._join_url(res.url, ele_a.get('href'))
-        return downloadpage_link, referer
+        return downloadpage_link
 
-    def _visit_downloadpage(self, downloadpage_link, referer):
+    def _visit_downloadpage(self, downloadpage_link):
         """ get the real download link of subtitles.
         """
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(downloadpage_link, headers=headers)
+        res = self.session.get(downloadpage_link, headers={'Referer': self.referer})
         doc = res.content
-        referer = res.url
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         ele_a_list = soup.select('a.btn.btn-sm')
         if not ele_a_list:
@@ -192,52 +205,32 @@ class ZimukuSubSearcher(BaseSubSearcher):
         ele_a = ele_a_list[1]
         download_link = ele_a.get('href')
         download_link = self._join_url(res.url, download_link)
-        return download_link, referer
+        return download_link
 
-    def _search_subs(self, videofile, languages, exts, keyword=None):
-        videoname = self._get_videoname(videofile)  # basename, not include ext
-        videoinfo = self._parse_videoname(videoname)
-        if keyword is None:
-            keyword = self._gen_keyword(videoinfo)
-
-        self._debug('keyword: {}'.format(keyword))
-        self._debug('videoinfo: {}'.format(videoinfo))
-
+    def _search_subs(self):
         # try find subinfo_list from self._cache
-        if keyword not in self._cache:
-            subinfo_list, referer = self._get_subinfo_list(keyword)
-            self._cache[keyword] = (subinfo_list, referer)
+        if self.keyword not in self._cache:
+            subinfo_list = self._get_subinfo_list()
+            self._cache[self.keyword] = (subinfo_list, self.referer)
         else:
-            subinfo_list, referer = self._cache.get(keyword)
-
+            subinfo_list = self._cache.get(self.keyword)
         self._debug('subinfo_list: {}'.format(subinfo_list))
-
-        subinfo = self._filter_subinfo_list(
-            subinfo_list, videoinfo, languages, exts)
-
+        subinfo = self._filter_subinfo_list(subinfo_list)
         self._debug('subinfo: {}'.format(subinfo))
-
         if not subinfo:
             return []
 
-        downloadpage_link, referer = self._visit_detailpage(
-            subinfo['link'], referer)
+        downloadpage_link = self._visit_detailpage(subinfo['link'])
         self._debug('downloadpage_link: {}'.format(downloadpage_link))
-        subtitle_download_link, referer = self._visit_downloadpage(
-            downloadpage_link, referer)
-        self._debug('subtitle_download_link: {}'.format(
-            subtitle_download_link))
-        filepath, referer = self._download_subs(
-            subtitle_download_link, videofile, referer, subinfo['title'])
-
+        subtitle_download_link = self._visit_downloadpage(downloadpage_link)
+        self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
+        filepath = self._download_subs( subtitle_download_link, subinfo['title'])
         self._debug('filepath: {}'.format(filepath))
-
-        subs = self._extract(filepath, videofile, exts)
-
+        subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
 
         return [{
-            'link': referer,
+            'link': self.referer,
             'language': subinfo['languages'],
             'ext': subinfo['exts'],
             'subname': subs,

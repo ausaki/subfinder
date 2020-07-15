@@ -8,3 +8,4 @@ SubFinder.egg-info/
 *.py[co]
 *.log
 debug/
+video_test/

@@ -33,7 +33,6 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         self.API_SUBTITLE_DOWNLOAD = self.api_urls.get(
             'zimuzu_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD)
 
-
     def _parse_search_result_html(self, doc):
         """
         解析搜索结果页面，返回字幕信息列表
@@ -109,9 +108,9 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             return link
         return ''
 
-    def _first_filter_subinfo_list(self, subinfo_list, videoinfo, languages):
-        season = videoinfo.get('season')
-        episode = videoinfo.get('episode')
+    def _first_filter_subinfo_list(self, subinfo_list):
+        season = self.videoinfo.get('season')
+        episode = self.videoinfo.get('episode')
 
         result = []
 
@@ -122,42 +121,35 @@ class ZimuzuSubSearcher(BaseSubSearcher):
             season_ = videoinfo_.get('season')
             episode_ = videoinfo_.get('episode')
 
-            if (season == season_ and
-                episode == episode_ and
-                    set(languages_).intersection(set(languages))):
-
+            if (season == season_ and episode == episode_ and set(languages_).intersection(set(self.languages))):
                 result.append(subinfo)
 
         return result
 
-    def _get_subinfo_list(self, keyword):
+    def _get_subinfo_list(self):
         """根据关键词搜索，返回字幕信息列表
         """
-        res = self.session.get(
-            self.API_URL, params={'keyword': keyword, 'type': 'subtitle'})
+        res = self.session.get(self.API_URL, params={'keyword': self.keyword, 'type': 'subtitle'})
         doc = res.content
-        referer = res.url
+        self.referer = res.url
         subinfo_list = self._parse_search_result_html(doc)
+        return subinfo_list
 
-        return subinfo_list, referer
-
-    def _visit_detailpage(self, detailpage_link, referer):
+    def _visit_detailpage(self, detailpage_link):
         """访问字幕详情页面，解析出下载页面的地址
         """
-        headers = {'Referer': referer}
-        res = self.session.get(detailpage_link, headers=headers)
-        referer = res.url
+        res = self.session.get(detailpage_link, headers={'Referer': self.referer})
+        self.referer = res.url
         doc = res.content
         result = self._parse_detailpage_html(doc)
-        return result, referer
+        return result
 
-    def _visit_downloadpage(self, downloadpage_link, referer):
+    def _visit_downloadpage(self, downloadpage_link):
         """
         该页面使用Vue动态渲染，通过请求API获取字幕URL
         """
-        headers = {'Referer': referer}
-        res = self.session.get(downloadpage_link, headers=headers)
-        referer = res.url
+        res = self.session.get(downloadpage_link, headers={'Referer': self.referer})
+        self.referer = res.url
         doc = res.text
         # download_link = self._parse_downloadpage_html(doc)
         parts = urlparse.urlparse(downloadpage_link)
@@ -166,86 +158,53 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         if code is not None:
             code = code[0]
         else:
-            return '', referer
+            return ''
         # parse api url for real downloadable url
         api_url = self.API_SUBTITLE_DOWNLOAD
         pattern = r'(/api/v{\d}+/static/subtitle/detail)\?code='
         match = re.search(pattern, doc)
         if match:
             api_url = match.group(1)
-        api_url = self._join_url(referer, api_url)
+        api_url = self._join_url(self.referer, api_url)
         json_res = self.session.get(api_url, params={'code': code})
         data = json_res.json()
         download_link = data['data']['info']['file']
-        return download_link, referer
+        return download_link
 
-    def _get_keyword(self, videoinfo):
-        """ 获取关键词
-        """
-        keyword = videoinfo.get('title')
-        if videoinfo['season'] != 0:
-            keyword += '.S{:02d}'.format(videoinfo['season'])
-        if videoinfo['episode'] != 0:
-            keyword += '.E{:02d}'.format(videoinfo['episode'])
-        # replace space with '+'
-        keyword = re.sub(r'\s+', '+', keyword)
-        return keyword
-
-    def _search_subs(self, videofile, languages, exts, keyword=None):
-        videoname = self._get_videoname(videofile)
-        videoinfo = self._parse_videoname(videoname)
-        if keyword is None:
-            keyword = self._get_keyword(videoinfo)
-        
-        self._debug('keyword: {}'.format(keyword))
-        self._debug('videoinfo: {}'.format(videoinfo))
-
+    def _search_subs(self):
         # try find subinfo_list from self._cache
-        if keyword not in self._cache:
-            subinfo_list, referer = self._get_subinfo_list(keyword)
-            self._cache[keyword] = (subinfo_list, referer)
+        if self.keyword not in self._cache:
+            subinfo_list = self._get_subinfo_list()
+            self._cache[self.keyword] = (subinfo_list, self.referer)
         else:
-            subinfo_list, referer = self._cache.get(keyword)
-
+            subinfo_list, self.referer = self._cache.get(self.keyword)
         self._debug('subinfo_list: {}'.format(subinfo_list))
-
         # 初步过滤掉无关的字幕
-        subinfo_list = self._first_filter_subinfo_list(
-            subinfo_list, videoinfo, languages)
-
+        subinfo_list = self._first_filter_subinfo_list(subinfo_list)
         self._debug('subinfo_list: {}'.format(subinfo_list))
 
         # 补全字幕信息中的 exts 字段
         for subinfo in subinfo_list:
-            detail_info, referer = self._visit_detailpage(
-                subinfo['link'], referer)
+            detail_info = self._visit_detailpage(subinfo['link'])
             subinfo['exts'] = detail_info['exts']
 
-        subinfo = self._filter_subinfo_list(
-            subinfo_list, videoinfo, languages, exts)
-
+        subinfo = self._filter_subinfo_list(subinfo_list)
         self._debug('subinfo: {}'.format(subinfo))
-
         if not subinfo:
             return []
 
-        detail_info, referer = self._visit_detailpage(subinfo['link'], referer)
+        detail_info = self._visit_detailpage(subinfo['link'])
         downloadpage_link = detail_info['downloadpage_link']
         self._debug('downloadpage_link: {}'.format(downloadpage_link))
-        download_link, referer = self._visit_downloadpage(
-            downloadpage_link, referer)
+        download_link = self._visit_downloadpage(downloadpage_link)
         self._debug('download_link: {}'.format(download_link))
-        filepath, referer = self._download_subs(
-            download_link, videofile, referer, subinfo['title'])
-
+        filepath = self._download_subs(download_link, subinfo['title'])
         self._debug('filepath: {}'.format(filepath))
-
-        subs = self._extract(filepath, videofile, exts)
-
+        subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
 
         return [{
-            'link': referer,
+            'link': self.referer,
             'language': subinfo['languages'],
             'ext': subinfo['exts'],
             'subname': subs,
