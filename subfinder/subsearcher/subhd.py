@@ -2,10 +2,10 @@ import os
 import pathlib
 import urllib
 import bs4
-from .subsearcher import BaseSubSearcher
+from .subsearcher import HTMLSubSearcher, SubInfo
 
 
-class SubHDSubSearcher(BaseSubSearcher):
+class SubHDSubSearcher(HTMLSubSearcher):
     """ SubHD 字幕搜索器(https://subhd.tv)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
@@ -35,15 +35,7 @@ class SubHDSubSearcher(BaseSubSearcher):
         if not div_list:
             return subinfo_list
         for div in div_list:
-            subinfo = {
-                'title': '',
-                'link': '',
-                'author': '',
-                'exts': [],
-                'languages': [],
-                'rate': 0,
-                'download_count': 0,
-            }
+            subinfo = SubInfo()
             div_title = div.find('div', class_='f12 pt-1')
             if not div_title:
                 break
@@ -119,6 +111,9 @@ class SubHDSubSearcher(BaseSubSearcher):
             self.subfinder.logger.info('遇到验证码, 尝试通过字幕预览下载, 如果失败请尝试手动下载: {}'.format(detailpage_link))
         return download_link
     
+    def _visit_downloadpage(self, downloadpage_link):
+        pass
+
     def _try_preview_subs(self, detailpage_link):
         subs = []
         root = os.path.dirname(self.videofile)
@@ -161,18 +156,7 @@ class SubHDSubSearcher(BaseSubSearcher):
 
         return subs
 
-    def _search_subs(self):
-        subinfo = None
-        for keyword in self.keywords:
-            subinfo_list = self._get_subinfo_list(keyword)
-            self._debug('subinfo_list: {}'.format(subinfo_list))
-            subinfo = self._filter_subinfo_list(subinfo_list)
-            self._debug('subinfo: {}'.format(subinfo))
-            if subinfo:
-                break
-        if not subinfo:
-            return []
-        
+    def _download_subtitle(self, subinfo):
         subtitle_download_link = self._visit_detailpage( subinfo['link'])
         self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
         subs = None
@@ -183,11 +167,4 @@ class SubHDSubSearcher(BaseSubSearcher):
             self._debug('filepath: {}'.format(filepath))
             subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
-
-        return [{
-            'link': self.referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }] if subs else []
+        return subs

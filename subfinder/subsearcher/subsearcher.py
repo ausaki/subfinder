@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals
 from abc import abstractmethod, ABCMeta
+from build.lib import subfinder
 import os
 from os.path import join
 import re
@@ -56,20 +57,8 @@ class BaseSubSearcher(object):
 
     SUPPORT_LANGUAGES = []
     SUPPORT_EXTS = []
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        'English': 'en',
-        'english': 'en',
-        '英文': 'en',
-        '双语': 'zh_en',
-        '中英': 'zh_en',
-    }
-    COMMON_LANGUAGES = ['简体', '繁体', '英文']
-
-    API_URL = ''
-
     shortname = 'base_subsearcher'
+    API_URL = ''
 
     def __init__(self, subfinder,  **kwargs):
         """
@@ -143,15 +132,7 @@ class BaseSubSearcher(object):
         - season, defaults to 0
         - episode, defaults to 0
         """
-        info = {
-            'title': '',
-            'season': 0,
-            'episode': 0,
-            'resolution': '',
-            'source': '',
-            'audio_encoding': '',
-            'video_encoding': '',
-        }
+        info = VideoInfo()
         mapping = {
             'resolution': cls.RE_RESOLUTION,
             'source': cls.RE_SOURCE,
@@ -187,24 +168,6 @@ class BaseSubSearcher(object):
 
         return info
 
-    @classmethod
-    def _gen_keyword(cls, videoinfo):
-        """ 获取关键词
-        """
-        separators = ['.', ' ']
-        keywords = []
-        for sep in separators:
-            keyword = [videoinfo.get('title')]
-            if videoinfo['season'] != 0:
-                keyword.append('S{:02d}'.format(videoinfo['season']))
-            if videoinfo['episode'] != 0:
-                keyword.append('E{:02d}'.format(videoinfo['episode']))
-            # replace space with ''
-            keyword_str = sep.join(keyword)
-            keyword_str = re.sub(r'\s+', ' ', keyword_str)
-            keywords.append(keyword_str)
-        return keywords
-
     def _gen_subname(self, origin_file, language=None, ext=None):
         if not language:
             language_ = []
@@ -225,14 +188,10 @@ class BaseSubSearcher(object):
         if not ext.startswith('.'):
             ext = '.' + ext
 
-        return '{basename}{language}{ext}'.format(
-            basename=basename,
-            language=language,
-            ext=ext)
+        return '{basename}{language}{ext}'.format(basename=basename, language=language, ext=ext)
 
     def _extract(self, compressed_file):
         """ 解压字幕文件，如果无法解压，则直接返回 compressed_file。
-        exts 参数用于过滤掉非字幕文件，只有文件的扩展名在 exts 中，才解压该文件。
         """
         if not CompressedFile.is_compressed_file(compressed_file):
             return [compressed_file]
@@ -255,6 +214,162 @@ class BaseSubSearcher(object):
             subs.append(subpath)
         cf.close()
         return subs
+
+    def _download_subtitle(self, download_link, subtitle):
+        """ 下载字幕
+        videofile: 视频文件路径
+        sub_title: 字幕标题（文件名）
+        download_link: 下载链接
+        """
+        root = os.path.dirname(self.videofile)
+        name = self.videoname
+        ext = ''
+        res = self.session.get(download_link, headers={'Referer': self.referer}, stream=True)
+        self.referer = res.url
+        # 尝试从 Content-Disposition 中获取文件后缀名
+        content_disposition = res.headers.get('Content-Disposition', '')
+        if content_disposition:
+            _, params = cgi.parse_header(content_disposition)
+            filename = params.get('filename')
+            if filename:
+                _, ext = os.path.splitext(filename)
+                ext = ext[1:]
+        if ext == '':
+            # 尝试从url 中获取文件后缀名
+            p = urlparse.urlparse(res.url)
+            path = p.path
+            if path:
+                _, ext = os.path.splitext(path)
+                ext = ext[1:]
+        if ext == '':
+            # 尝试从字幕标题中获取文件后缀名
+            _, ext = os.path.splitext(subtitle)
+            ext = ext[1:]
+
+        filename = '{}.{}'.format(name, ext)
+        filepath = os.path.join(root, filename)
+        with open(filepath, 'wb') as fp:
+            for chunk in res.iter_content(8192):
+                fp.write(chunk)
+        res.close()
+        return filepath
+
+    @abstractmethod
+    def _search_subs(self):
+        """
+        subclass should implement this private method.
+        """
+        pass
+
+    def _prepare_search_subs(self, videofile, languages=None, exts=None, keyword=None):
+        if languages is None:
+            languages = self.SUPPORT_LANGUAGES
+        elif isinstance(languages, str):
+            languages = [languages]
+        self._check_languages(languages)
+
+        if exts is None:
+            exts = self.SUPPORT_EXTS
+        elif isinstance(exts, str):
+            exts = [exts]
+        self._check_exts(exts)
+
+        self.languages = languages
+        self.exts = exts
+        self.videofile = videofile
+        self.videoname = self._get_videoname(videofile)  # basename, not include ext
+        self.videoinfo = self._parse_videoname(self.videoname)
+        if keyword is None:
+            keywords = self._gen_keyword(self.videoinfo)
+        else:
+            keywords = [keyword]
+        self.keywords = keywords
+
+    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
+        """ search subtitles of videofile.
+
+        `videofile` is the absolute(or relative) path of the video file.
+
+        `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
+        implemention of subclass. `languages` accepts one language or a list of language
+
+        `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
+        depende on implemention of subclass. `ext` accepts one ext or a list of ext
+
+        `keyword` is used to searching on the subtitle website.
+
+        return a list of subtitle info
+        [
+            {
+                'link': '',     # download link
+                'language': '', # language
+                'ext': '',      # ext
+                'subname': '',  # the filename of subtitles
+                'downloaded': False, # it's tell `SubFinder` whether need to download.
+            },
+            {
+                'link': '',
+                'language': '',
+                'ext': '',
+                'subname': '',
+            },
+            ...
+        ]
+        - `link`, it's optional, but if `downloaded` is False, then `link` is required.
+        - `language`, it's optional
+        - `subname`, it's optional, but if `downloaded` is False, then `subname` is required.
+        - `downloaded`, `downloaded` is required.
+            if `downloaded` is True, then `SubFinder` will not download again,
+            otherwise `SubFinder` will download link.
+        """
+        self._prepare_search_subs(videofile, languages, exts, keyword)
+        self._debug('keywords: {}'.format(self.keywords))
+        self._debug('videoinfo: {}'.format(self.videoinfo))
+        return self._search_subs()
+
+    def __str__(self):
+        if hasattr(self.__class__, 'shortname'):
+            name = self.__class__.shortname
+        else:
+            name = self.__class__.__name__
+        return '<{}>'.format(name)
+
+    def __unicode__(self):
+        return self.__str__()
+
+
+class HTMLSubSearcher(BaseSubSearcher):
+    __metaclass__ = ABCMeta
+
+    LANGUAGES_MAP = {
+        '简体': 'zh_chs',
+        '繁體': 'zh_cht',
+        'English': 'en',
+        'english': 'en',
+        '英文': 'en',
+        '双语': 'zh_en',
+        '中英': 'zh_en',
+    }
+    COMMON_LANGUAGES = ['简体', '繁体', '英文']
+    shortname = 'html_subsearcher'
+
+    @classmethod
+    def _gen_keyword(cls, videoinfo):
+        """ 获取关键词
+        """
+        separators = ['.', ' ']
+        keywords = []
+        for sep in separators:
+            keyword = [videoinfo.get('title')]
+            if videoinfo['season'] != 0:
+                keyword.append('S{:02d}'.format(videoinfo['season']))
+            if videoinfo['episode'] != 0:
+                keyword.append('E{:02d}'.format(videoinfo['episode']))
+            # replace space with ''
+            keyword_str = sep.join(keyword)
+            keyword_str = re.sub(r'\s+', ' ', keyword_str)
+            keywords.append(keyword_str)
+        return keywords
 
     def _filter_subinfo_list(self, subinfo_list):
         """ filter subinfo list base on:
@@ -307,126 +422,105 @@ class BaseSubSearcher(object):
                                              key=lambda item: (item['rate'], item['download_count']), reverse=True)
                 return sorted_subinfo_list[0]
 
-    def _download_subs(self, download_link, subtitle):
-        """ 下载字幕
-        videofile: 视频文件路径
-        sub_title: 字幕标题（文件名）
-        download_link: 下载链接
-        referer: referer
+    @abstractmethod
+    def _get_subinfo_list(self, keyword):
+        """ return subinfo_list of videoname
         """
-        root = os.path.dirname(self.videofile)
-        name = self.videoname
-        ext = ''
-
-        res = self.session.get(download_link, headers={'Referer': self.referer}, stream=True)
-        self.referer = res.url
-
-        # 尝试从 Content-Disposition 中获取文件后缀名
-        content_disposition = res.headers.get('Content-Disposition', '')
-        if content_disposition:
-            _, params = cgi.parse_header(content_disposition)
-            filename = params.get('filename')
-            if filename:
-                _, ext = os.path.splitext(filename)
-                ext = ext[1:]
-
-        if ext == '':
-            # 尝试从url 中获取文件后缀名
-            p = urlparse.urlparse(res.url)
-            path = p.path
-            if path:
-                _, ext = os.path.splitext(path)
-                ext = ext[1:]
-
-        if ext == '':
-            # 尝试从字幕标题中获取文件后缀名
-            _, ext = os.path.splitext(subtitle)
-            ext = ext[1:]
-
-        filename = '{}.{}'.format(name, ext)
-        filepath = os.path.join(root, filename)
-        with open(filepath, 'wb') as fp:
-            for chunk in res.iter_content(8192):
-                fp.write(chunk)
-        res.close()
-        return filepath
+        # searching subtitles
+        pass
 
     @abstractmethod
+    def _visit_detailpage(self, detailpage_link):
+        pass
+
+    @abstractmethod
+    def _visit_downloadpage(self, downloadpage_link):
+        """ get the real download link of subtitles.
+        """
+        pass
+
+    def _get_subinfo(self):
+        subinfo = None
+        for keyword in self.keywords:
+            subinfo_list = self._get_subinfo_list(keyword)
+            self._debug('subinfo_list: {}'.format(subinfo_list))
+            subinfo = self._filter_subinfo_list(subinfo_list)
+            self._debug('subinfo: {}'.format(subinfo))
+            if subinfo:
+                break
+        return subinfo
+
+    def _download_subs(self, subinfo):
+        downloadpage_link = self._visit_detailpage(subinfo['link'])
+        self._debug('downloadpage_link: {}'.format(downloadpage_link))
+        subtitle_download_link = self._visit_downloadpage(downloadpage_link)
+        self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
+        filepath = self._download_subtitle(subtitle_download_link, subinfo['title'])
+        self._debug('filepath: {}'.format(filepath))
+        subs = self._extract(filepath)
+        self._debug('subs: {}'.format(subs))
+        return subs
+
     def _search_subs(self):
-        """
-        subclass should implement this private method.
-        """
-        return []
+        subinfo = self._get_subinfo()
+        if not subinfo:
+            return []
+        subs = self._download_subs(subinfo)
+        return [{
+            'link': self.referer,
+            'language': subinfo['languages'],
+            'ext': subinfo['exts'],
+            'subname': subs,
+            'downloaded': True
+        }] if subs else []
 
-    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
-        """ search subtitles of videofile.
 
-        `videofile` is the absolute(or relative) path of the video file.
+class VideoInfo(dict):
+    FIELDS = [
+        'title',
+        'season',
+        'episode',
+        'resolution',
+        'source',
+        'audio_encoding',
+        'video_encoding',
+    ]
 
-        `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
-        implemention of subclass. `languages` accepts one language or a list of language
+    def __init__(self, *args, **kwargs) -> None:
+        super(VideoInfo, self).__init__(*args, **kwargs)
+        self['title'] = ''
+        self['season'] = 0
+        self['episode'] = 0
+        self['resolution'] = ''
+        self['source'] = ''
+        self['audio_encoding'] = ''
+        self['video_encoding'] = ''
+        for k, v in kwargs:
+            if k in self.FIELDS:
+                self[k] = v
 
-        `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
-        depende on implemention of subclass. `ext` accepts one ext or a list of ext
 
-        `keyword` is used to searching on the subtitle website.
+class SubInfo(dict):
+    FIELDS = [
+        'title',
+        'link',
+        'author',
+        'exts',
+        'languages',
+        'rate',
+        'download_count',
+    ]
 
-        return a list of subtitle info
-        [
-            {
-                'link': '',     # download link
-                'language': '', # language
-                'ext': '',      # ext
-                'subname': '',  # the filename of subtitles
-                'downloaded': False, # it's tell `SubFinder` whether need to download.
-            },
-            {
-                'link': '',
-                'language': '',
-                'ext': '',
-                'subname': '',
-            },
-            ...
-        ]
-        - `link`, it's optional, but if `downloaded` is False, then `link` is required.
-        - `language`, it's optional
-        - `subname`, it's optional, but if `downloaded` is False, then `subname` is required.
-        - `downloaded`, `downloaded` is required.
-            if `downloaded` is True, then `SubFinder` will not download again,
-            otherwise `SubFinder` will download link.
-        """
-        if languages is None:
-            languages = self.SUPPORT_LANGUAGES
-        elif isinstance(languages, str):
-            languages = [languages]
-        self._check_languages(languages)
+    def __init__(self, *args, **kwargs) -> None:
+        super(SubInfo, self).__init__(*args, **kwargs)
+        self['title'] = ''
+        self['link'] = ''
+        self['author'] = ''
+        self['exts'] = []
+        self['languages'] = []
+        self['rate'] = 0
+        self['download_count'] = 0
 
-        if exts is None:
-            exts = self.SUPPORT_EXTS
-        elif isinstance(exts, str):
-            exts = [exts]
-        self._check_exts(exts)
-
-        self.languages = languages
-        self.exts = exts
-        self.videofile = videofile
-        self.videoname = self._get_videoname(videofile)  # basename, not include ext
-        self.videoinfo = self._parse_videoname(self.videoname)
-        if keyword is None:
-            keywords = self._gen_keyword(self.videoinfo)
-        else:
-            keywords = [keyword]
-        self.keywords = keywords
-        self._debug('keywords: {}'.format(keywords))
-        self._debug('videoinfo: {}'.format(self.videoinfo))
-        return self._search_subs()
-
-    def __str__(self):
-        if hasattr(self.__class__, 'shortname'):
-            name = self.__class__.shortname
-        else:
-            name = self.__class__.__name__
-        return '<{}>'.format(name)
-
-    def __unicode__(self):
-        return self.__str__()
+        for k, v in kwargs:
+            if k in self.FIELDS:
+                self[k] = v

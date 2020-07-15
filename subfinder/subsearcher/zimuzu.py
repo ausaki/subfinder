@@ -6,10 +6,10 @@ try:
     import urlparse
 except ImportError as e:
     from urllib import parse as urlparse
-from .subsearcher import BaseSubSearcher
+from .subsearcher import HTMLSubSearcher, SubInfo
 
 
-class ZimuzuSubSearcher(BaseSubSearcher):
+class ZimuzuSubSearcher(HTMLSubSearcher):
     """ zimuzu 字幕搜索器(http://www.zimuzu.io/)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
@@ -37,15 +37,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         if not search_item_div_list:
             return []
         for item in search_item_div_list:
-            subinfo = {
-                'title': '',
-                'link': '',
-                'author': 'zimuzu',
-                'exts': [],
-                'languages': [],
-                'rate': 0,
-                'download_count': 0,
-            }
+            subinfo = SubInfo()
             a = item.find('a')
             if not a:
                 continue
@@ -152,14 +144,7 @@ class ZimuzuSubSearcher(BaseSubSearcher):
         return download_link
 
     def _search_subs(self):
-        # try find subinfo_list from self._cache
-        subinfo = None
-        for keyword in self.keywords:
-            subinfo_list = self._get_subinfo_list(keyword)
-            subinfo = self._filter_subinfo_list(subinfo_list)
-            self._debug('subinfo: {}'.format(subinfo))
-            if subinfo:
-                break
+        subinfo = self._get_subinfo()
         if not subinfo:
             return []
 

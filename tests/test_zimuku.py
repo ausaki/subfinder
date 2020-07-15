@@ -4,6 +4,7 @@
 from __future__ import unicode_literals, print_function
 import os
 import pathlib
+from re import sub
 from tests.test_subfinder import videofile
 import subfinder
 import pytest
@@ -42,3 +43,13 @@ def test_parse_download_count(zimuku):
     for text, count in test_cases.items():
         c = zimuku._parse_downloadcount(text)
         assert c == count
+
+def test_parse(videofile: pathlib.Path):
+    subfinder = SubFinder(subsearcher_class=ZimukuSubSearcher)
+    zimuku: ZimukuSubSearcher = subfinder.subsearcher[0]
+    zimuku._prepare_search_subs(videofile)
+    subinfo_list = zimuku._get_subinfo_list(zimuku.keywords[0])
+    assert subinfo_list
+    subinfo = subinfo_list[0]
+    assert subinfo
+    assert subinfo['title'] and subinfo['link'] and subinfo['exts'] and subinfo['languages']

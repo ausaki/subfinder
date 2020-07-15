@@ -2,6 +2,7 @@
 
 from .subsearcher import (
     BaseSubSearcher, 
+    HTMLSubSearcher,
     register,
     register_subsearcher, 
     get_subsearcher, 

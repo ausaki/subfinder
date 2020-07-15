@@ -88,7 +88,7 @@ PATTERN = re.compile(r'下载 (\d+) 个字幕')
 
 
 def check_cmd_output(cmd):
-    p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    p = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
     output = p.stdout.decode('utf8')
     assert p.returncode == 0
     assert '[ERROR]' not in output
@@ -141,8 +141,6 @@ def test_cmd_option_video_exts(tmp_path: pathlib.Path):
 def test_cmd_option_keyword(videofile: pathlib.Path):
     parent = videofile.parent
     rm_subtitles(parent)
-    parent = videofile.parent
-    rm_subtitles(parent)
     cmd = 'subfinder {} -m zimuku -k Yellowstone.2018.S03E04'.format(videofile)
     n = check_cmd_output(cmd)
     assert n > 0
@@ -159,6 +157,6 @@ def test_cmd_option_languages(videofile: pathlib.Path):
 def test_cmd_option_exts(videofile: pathlib.Path):
     parent = videofile.parent
     rm_subtitles(parent)
-    cmd = 'subfinder {} -m zimuku -e ass'.format(videofile)
+    cmd = 'subfinder {} -m zimuku -e ass --debug'.format(videofile)
     n = check_cmd_output(cmd)
     assert n > 0

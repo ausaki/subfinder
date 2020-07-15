@@ -3,10 +3,10 @@ from __future__ import unicode_literals, print_function
 import re
 from re import match
 import bs4
-from .subsearcher import BaseSubSearcher
+from .subsearcher import HTMLSubSearcher, SubInfo
 
 
-class ZimukuSubSearcher(BaseSubSearcher):
+class ZimukuSubSearcher(HTMLSubSearcher):
     """ zimuku 字幕搜索器(https://www.zimuku.cn/)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
@@ -63,44 +63,39 @@ class ZimukuSubSearcher(BaseSubSearcher):
     def _parse_sublist_html(self, doc):
         soup = bs4.BeautifulSoup(doc, 'lxml')
         subinfo_list = []
-        ele_tr_list = soup.select(
-            'div.subs > table tr.odd, div.subs > table tr.even')
+        ele_tr_list = soup.select('div.subs > table tr')
         if not ele_tr_list:
             return subinfo_list
         for tr in ele_tr_list:
-            subinfo = {
-                'title': '',
-                'link': '',
-                'author': '',
-                'exts': [],
-                'languages': [],
-                'rate': 0,
-                'download_count': 0,
-            }
+            subinfo = SubInfo()
             ele_td = tr.find('td', class_='first')
-            if ele_td:
-                # 字幕标题
-                subinfo['title'] = ele_td.a.get('title').strip()
-                # 链接
-                subinfo['link'] = ele_td.a.get('href').strip()
-                # 格式
-                ele_span_list = ele_td.select('span.label.label-info')
-                for ele_span in ele_span_list:
-                    ext = ele_span.get_text().strip()
-                    ext = ext.lower()
-                    ext = ext.split('/')
-                    subinfo['exts'].extend(ext)
-                # 作者
-                ele_span = ele_td.select('span > a > span.label.label-danger')
-                if ele_span:
-                    subinfo['author'] = ele_span[0].get_text().strip()
+            if not ele_td:
+                continue
+            # 字幕标题
+            subinfo['title'] = ele_td.a.get('title').strip()
+            # 链接
+            subinfo['link'] = ele_td.a.get('href').strip()
+            # 格式
+            ele_span_list = ele_td.select('span.label.label-info')
+            for ele_span in ele_span_list:
+                ext = ele_span.get_text().strip()
+                ext = ext.lower()
+                ext = ext.split('/')
+                subinfo['exts'].extend(ext)
+            # 作者
+            ele_span = ele_td.select('span > a > span.label.label-danger')
+            if ele_span:
+                subinfo['author'] = ele_span[0].get_text().strip()
             # 语言
             ele_imgs = tr.select('td.tac.lang > img')
             if ele_imgs:
                 for ele_img in ele_imgs:
-                    language = ele_img.get('title', ele_img.get('alt'))
-                    language = self.LANGUAGES_MAP.get(language)
-                    subinfo['languages'].append(language)
+                    language = ele_img.get('title')
+                    if not language:
+                        language = ele_img.get('alt')
+                    for l1, l2 in self.LANGUAGES_MAP.items():
+                        if l1 in language:
+                            subinfo['languages'].append(l2)
             # 评分
             ele_i = tr.select('td.tac i.rating-star')
             if ele_i:
@@ -112,8 +107,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             ele_td = tr.select('td.tac')
             if ele_td:
                 ele_td = ele_td[-1]
-                subinfo['download_count'] = self._parse_downloadcount(
-                    ele_td.get_text().strip())
+                subinfo['download_count'] = self._parse_downloadcount( ele_td.get_text().strip())
             subinfo_list.append(subinfo)
         return subinfo_list
 
@@ -202,32 +196,3 @@ class ZimukuSubSearcher(BaseSubSearcher):
         download_link = ele_a.get('href')
         download_link = self._join_url(res.url, download_link)
         return download_link
-
-    def _search_subs(self):
-        subinfo = None
-        for keyword in self.keywords:
-            subinfo_list = self._get_subinfo_list(keyword)
-            self._debug('subinfo_list: {}'.format(subinfo_list))
-            subinfo = self._filter_subinfo_list(subinfo_list)
-            self._debug('subinfo: {}'.format(subinfo))
-            if subinfo:
-                break
-        if not subinfo:
-            return []
-
-        downloadpage_link = self._visit_detailpage(subinfo['link'])
-        self._debug('downloadpage_link: {}'.format(downloadpage_link))
-        subtitle_download_link = self._visit_downloadpage(downloadpage_link)
-        self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
-        filepath = self._download_subs(subtitle_download_link, subinfo['title'])
-        self._debug('filepath: {}'.format(filepath))
-        subs = self._extract(filepath)
-        self._debug('subs: {}'.format(subs))
-
-        return [{
-            'link': self.referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }] if subs else []

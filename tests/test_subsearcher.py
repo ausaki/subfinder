@@ -4,7 +4,7 @@ from __future__ import unicode_literals, print_function
 import os
 import pytest
 from subfinder.subfinder import SubFinder
-from subfinder.subsearcher import BaseSubSearcher
+from subfinder.subsearcher import BaseSubSearcher, HTMLSubSearcher
 from subfinder.subsearcher.exceptions import LanguageError, ExtError
 
 
@@ -67,8 +67,8 @@ def test_gen_subname():
     language = 'zh'
     ext = 'srt'
     subfinder = SubFinder()
-    s = BaseSubSearcher(subfinder)
-    s.search_subs(vidoefile)
+    s = HTMLSubSearcher(subfinder)
+    s._prepare_search_subs(vidoefile)
     origin_file = 'origin_file.简体&英文.ass'
     subname =  s._gen_subname(origin_file)
     assert subname == 'test.简体&英文.ass'
@@ -96,14 +96,14 @@ def test_gen_keyword():
         'audio_encoding': '',
         'video_encoding': '',
     }
-    expected_keyword = videoinfo['title']
-    keyword = BaseSubSearcher._gen_keyword(videoinfo)
+    expected_keyword = [videoinfo['title'], videoinfo['title']]
+    keyword = HTMLSubSearcher._gen_keyword(videoinfo)
     assert keyword == expected_keyword
 
     videoinfo['season'] = 1
     videoinfo['episode'] = 2
-    expected_keyword = videoinfo['title'] + '.S01.E02'
-    keyword = BaseSubSearcher._gen_keyword(videoinfo)
+    expected_keyword = [videoinfo['title'] + '.S01.E02', videoinfo['title'] + ' S01 E02']
+    keyword = HTMLSubSearcher._gen_keyword(videoinfo)
     assert keyword == expected_keyword
 
 
