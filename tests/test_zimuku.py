@@ -3,6 +3,10 @@
 
 from __future__ import unicode_literals, print_function
 import os
+import pathlib
+from re import sub
+from tests.test_subfinder import videofile
+import subfinder
 import pytest
 from subfinder.subsearcher import ZimukuSubSearcher
 from subfinder.subfinder import SubFinder
@@ -19,13 +23,13 @@ def zimuku():
 def test_languages(zimuku):
     zimuku._check_languages(['zh_chs'])
     with pytest.raises(LanguageError):
-        zimuku._check_languages(['Lang'])
+        zimuku._check_languages(['fake_lang'])
 
 
 def test_exts(zimuku):
     zimuku._check_exts(['ass'])
     with pytest.raises(ExtError):
-        zimuku._check_exts(['Ext'])
+        zimuku._check_exts(['fake_ext'])
 
 
 def test_parse_download_count(zimuku):
@@ -39,3 +43,12 @@ def test_parse_download_count(zimuku):
     for text, count in test_cases.items():
         c = zimuku._parse_downloadcount(text)
         assert c == count
+
+def test_parse(videofile: pathlib.Path):
+    zimuku: ZimukuSubSearcher = ZimukuSubSearcher(SubFinder())
+    zimuku._prepare_search_subs(videofile)
+    subinfo_list = zimuku._get_subinfo_list(zimuku.keywords[0])
+    assert subinfo_list
+    subinfo = subinfo_list[0]
+    assert subinfo
+    assert subinfo['title'] and subinfo['link'] and subinfo['exts'] and subinfo['languages']

@@ -1,21 +1,15 @@
 import os
+import pathlib
 import urllib
 import bs4
-from .subsearcher import BaseSubSearcher
+from .subsearcher import HTMLSubSearcher, SubInfo
 
 
-class SubHDSubSearcher(BaseSubSearcher):
+class SubHDSubSearcher(HTMLSubSearcher):
     """ SubHD 字幕搜索器(https://subhd.tv)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        '英文': 'en',
-        '双语': 'zh_en'
-    }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'https://subhd.tv/search/'
     API_SUBTITLE_DOWNLOAD = '/ajax/down_ajax'
@@ -41,15 +35,7 @@ class SubHDSubSearcher(BaseSubSearcher):
         if not div_list:
             return subinfo_list
         for div in div_list:
-            subinfo = {
-                'title': '',
-                'link': '',
-                'author': '',
-                'exts': [],
-                'languages': [],
-                'rate': 0,
-                'download_count': 0,
-            }
+            subinfo = SubInfo()
             div_title = div.find('div', class_='f12 pt-1')
             if not div_title:
                 break
@@ -84,63 +70,59 @@ class SubHDSubSearcher(BaseSubSearcher):
             subinfo_list.append(subinfo)
         return subinfo_list
 
-    def _get_subinfo_list(self, videoname):
-        """ return subinfo_list of videoname
+    def _get_subinfo_list(self, keyword):
+        """ return subinfo_list of keyword
         """
         # searching subtitles
         url = self.API_URL
         if not url.endswith('/'): url += '/'
-        url += urllib.parse.quote(videoname) 
+        url += urllib.parse.quote(keyword) 
         res = self.session.get(url)
-        doc = res.content
-        referer = res.url
+        doc = res.text
+        self.referer = res.url
         subinfo_list = self._parse_search_results_html(doc)
         for subinfo in subinfo_list:
             subinfo['link'] = self._join_url(res.url, subinfo['link'])
-        return subinfo_list, referer
+        return subinfo_list
 
-    def _visit_detailpage(self, detailpage_link, referer):
+    def _visit_detailpage(self, detailpage_link):
         download_link = ''
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(detailpage_link, headers=headers)
+        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
         if not res.ok:
-            return download_link, ''
+            return download_link
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         button_download = soup.find('button', id=True, sid=True)
         if not button_download:
-            return download_link, ''
-        api_subtitle_url = self._join_url(referer, self.API_SUBTITLE_DOWNLOAD)
+            return download_link
+        api_subtitle_url = self._join_url(self.referer, self.API_SUBTITLE_DOWNLOAD)
         params = {
             'sub_id': button_download.get('sid'),
             'dtoken1': button_download.get('dtoken1'),
         }
         res = self.session.post(api_subtitle_url, json=params)
         if not res.ok:
-            return download_link, ''
+            return download_link
         data = res.json()
         if data['success']:
             download_link = data['url']
         else:
-            self.subfinder.logger.info('遇到验证码, 请尝试手动下载: {}'.format(detailpage_link))
-        return download_link, referer
+            self.subfinder.logger.info('遇到验证码, 尝试通过字幕预览下载, 如果失败请尝试手动下载: {}'.format(detailpage_link))
+        return download_link
     
-    def _try_preview_subs(self, detailpage_link, referer, videofile):
-        subs = []
-        root = os.path.dirname(videofile)
-        api_url = self._join_url(detailpage_link, self.API_SUBTITLE_PREVIEW)
-        headers = {
-            'Referer': referer
-        }
+    def _visit_downloadpage(self, downloadpage_link):
+        pass
 
-        res = self.session.get(detailpage_link, headers=headers)
+    def _try_preview_subs(self, detailpage_link):
+        subs = []
+        root = os.path.dirname(self.videofile)
+        api_url = self._join_url(detailpage_link, self.API_SUBTITLE_PREVIEW)
+        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
         if not res.ok:
             return subs
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         a_list = soup.select('a[data-target="#fileModal"][data-sid]')
         if not a_list:
@@ -149,7 +131,12 @@ class SubHDSubSearcher(BaseSubSearcher):
         for a in  a_list:
             s = a.string.strip()
             if s == '预览':
-                files.append((a.get('data-sid'), a.get('data-fname')))
+                sid = a.get('data-sid')
+                fname = a.get('data-fname')
+                ext = pathlib.PurePath(fname).suffix
+                ext = ext[1:]
+                if ext in self.exts:
+                    files.append((sid, fname))
         
         for sid, fname in files:
             params = {'dasid': sid, 'dafname': fname}
@@ -161,7 +148,7 @@ class SubHDSubSearcher(BaseSubSearcher):
                 continue
             filedata = data['filedata']
             origin_file = os.path.basename(fname)
-            subname = self._gen_subname(videofile, origin_file)
+            subname = self._gen_subname(origin_file)
             subname = os.path.join(root, subname)
             with open(subname, 'w') as fp:
                 fp.write(filedata)
@@ -169,48 +156,15 @@ class SubHDSubSearcher(BaseSubSearcher):
 
         return subs
 
-    def _search_subs(self, videofile, languages, exts, keyword=None):
-        videoname = self._get_videoname(videofile)  # basename, not include ext
-        videoinfo = self._parse_videoname(videoname)
-        if keyword is None:
-            keyword = self._gen_keyword(videoinfo)
-
-        self._debug('keyword: {}'.format(keyword))
-        self._debug('videoinfo: {}'.format(videoinfo))
-
-        # try find subinfo_list from self._cache
-        if keyword not in self._cache:
-            subinfo_list, referer = self._get_subinfo_list(keyword)
-            self._cache[keyword] = (subinfo_list, referer)
-        else:
-            subinfo_list, referer = self._cache.get(keyword)
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-
-        subinfo = self._filter_subinfo_list(
-            subinfo_list, videoinfo, languages, exts)
-        self._debug('subinfo: {}'.format(subinfo))
-        if not subinfo:
-            return []
-
-        subtitle_download_link, referer = self._visit_detailpage(
-            subinfo['link'], referer)
+    def _download_subtitle(self, subinfo):
+        subtitle_download_link = self._visit_detailpage( subinfo['link'])
         self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
-        
         subs = None
         if not subtitle_download_link:
-            subs = self._try_preview_subs(subinfo['link'], referer, videofile)
+            subs = self._try_preview_subs(subinfo['link'])
         else:
-            filepath, referer = self._download_subs(
-                subtitle_download_link, videofile, referer, subinfo['title'])
+            filepath = self._download_subs(subtitle_download_link, subinfo['title'])
             self._debug('filepath: {}'.format(filepath))
-            subs = self._extract(filepath, videofile, exts)
-
+            subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
-
-        return [{
-            'link': referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }] if subs else []
+        return subs

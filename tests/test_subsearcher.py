@@ -3,7 +3,8 @@
 from __future__ import unicode_literals, print_function
 import os
 import pytest
-from subfinder.subsearcher import BaseSubSearcher
+from subfinder.subfinder import SubFinder
+from subfinder.subsearcher import BaseSubSearcher, HTMLSubSearcher
 from subfinder.subsearcher.exceptions import LanguageError, ExtError
 
 
@@ -57,12 +58,52 @@ def test_parse_videoname():
         }
     }
     for name, info in test_cases.items():
-        info_ = BaseSubSearcher._parse_videoname(name)
+        info_ = HTMLSubSearcher._parse_videoname(name)
         assert info == info_
+
 
 def test_gen_subname():
     vidoefile = 'test.mkv'
     language = 'zh'
     ext = 'srt'
-    subname = BaseSubSearcher._gen_subname(vidoefile, language, ext)
-    assert subname == 'test.zh.srt'
+    subfinder = SubFinder()
+    s = HTMLSubSearcher(subfinder)
+    s._prepare_search_subs(vidoefile)
+    origin_file = 'origin_file.简体&英文.ass'
+    subname =  s._gen_subname(origin_file)
+    assert subname == 'test.简体&英文.ass'
+
+    origin_file = 'origin_file.简体.ass'
+    subname =  s._gen_subname(origin_file)
+    assert subname == 'test.简体.ass'
+
+    origin_file = 'origin_file.英文.ass'
+    subname =  s._gen_subname(origin_file)
+    assert subname == 'test.英文.ass'
+
+    origin_file = 'origin_file.繁体&英文.ass'
+    subname =  s._gen_subname(origin_file)
+    assert subname == 'test.繁体&英文.ass'
+
+
+def test_gen_keyword():
+    videoinfo = {
+        'title': 'title',
+        'season': 0,
+        'episode': 0,
+        'resolution': '',
+        'source': '',
+        'audio_encoding': '',
+        'video_encoding': '',
+    }
+    expected_keyword = [videoinfo['title'], videoinfo['title']]
+    keyword = HTMLSubSearcher._gen_keyword(videoinfo)
+    assert keyword == expected_keyword
+
+    videoinfo['season'] = 1
+    videoinfo['episode'] = 2
+    expected_keyword = [videoinfo['title'] + '.S01.E02', videoinfo['title'] + ' S01 E02']
+    keyword = HTMLSubSearcher._gen_keyword(videoinfo)
+    assert keyword == expected_keyword
+
+

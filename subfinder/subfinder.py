@@ -1,6 +1,7 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals
 import os
+from subfinder.subsearcher.subsearcher import get_all_subsearchers
 import sys
 import glob
 import fnmatch
@@ -54,6 +55,8 @@ class SubFinder(object):
         self.ignore = kwargs.get('ignore', False)
         # exclude
         self.exclude = kwargs.get('exclude', [])
+        # api urls
+        self.api_urls = kwargs.get('api_urls', {})
 
         self._init_session()
         self._init_pool()
@@ -63,15 +66,10 @@ class SubFinder(object):
         self._history = {}
 
         if subsearcher_class is None:
-            subsearcher_class = get_subsearcher('default')
+            subsearcher_class = list(get_all_subsearchers().values())
         if not isinstance(subsearcher_class, list):
             subsearcher_class = [subsearcher_class]
-
-        # api urls
-        api_urls = kwargs.get('api_urls', {})
-        
-        for sc in subsearcher_class:
-            self.subsearcher.append(sc(self, api_urls=api_urls))
+        self.subsearcher = subsearcher_class
 
     def _is_videofile(self, f):
         """ determine whether `f` is a valid video file, mostly base on file extension 
@@ -107,6 +105,8 @@ class SubFinder(object):
         """ 筛选出 path 目录下所有的视频文件
         """
         if self._is_videofile(path):
+            if self._fnmatch(os.path.basename(path)):
+                return
             if not self.ignore and self._has_subtitles(path):
                 return
             yield path
@@ -167,23 +167,20 @@ class SubFinder(object):
         basename = os.path.basename(videofile)
 
         subinfos = []
-        for subsearcher in self.subsearcher:
-            self.logger.info(
-                '{0}：开始使用 {1} 搜索字幕'.format(basename, subsearcher))
+        for subsearcher_cls in self.subsearcher:
+            subsearcher = subsearcher_cls(self, api_urls=self.api_urls)
+            self.logger.info('{0}：开始使用 {1} 搜索字幕'.format(basename, subsearcher))
             try:
-                subinfos = subsearcher.search_subs(
-                    videofile, self.languages, self.exts, self.keyword)
+                subinfos = subsearcher.search_subs(videofile, self.languages, self.exts, self.keyword)
             except Exception as e:
                 err = str(e)
                 if self.debug:
                     err = traceback.format_exc()
-                self.logger.error(
-                    '{}：搜索字幕发生错误： {}'.format(basename, err))
+                self.logger.error( '{}：搜索字幕发生错误： {}'.format(basename, err))
                 continue
             if subinfos:
                 break
-        self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format(
-            len(subinfos), basename))
+        self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format( len(subinfos), basename))
         try:
             for subinfo in subinfos:
                 downloaded = subinfo.get('downloaded', False)

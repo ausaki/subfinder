@@ -2,32 +2,21 @@
 from __future__ import unicode_literals, print_function
 import re
 import bs4
-from .subsearcher import BaseSubSearcher
+import time
+from .subsearcher import HTMLSubSearcher, SubInfo
 
 
-class ZimukuSubSearcher(BaseSubSearcher):
+class ZimukuSubSearcher(HTMLSubSearcher):
     """ zimuku 字幕搜索器(https://www.zimuku.cn/)
     """
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
-    LANGUAGES_MAP = {
-        '简体中文字幕': 'zh_chs',
-        '简体中文': 'zh_chs',
-        '繁體中文字幕': 'zh_cht',
-        '繁體中文': 'zh_cht',
-        'English字幕': 'en',
-        'English': 'en',
-        'english': 'en',
-        '双语字幕': 'zh_en',
-        '双语': 'zh_en'
-    }
-    COMMON_LANGUAGES = ['英文', '简体', '繁体']
 
     API_URL = 'http://www.zimuku.la/search/'
 
-    _cache = {}
-    shortname = 'zimuku'
+    MAX_RETRY_COUNT = 5
 
+    shortname = 'zimuku'
 
     def _parse_downloadcount(self, text):
         """ parse download count
@@ -60,58 +49,54 @@ class ZimukuSubSearcher(BaseSubSearcher):
         if not ele_divs:
             return subgroups
         for item in ele_divs:
+            info = {'title': '', 'link': '', 'sublist': []}
             ele_a = item.select('p.tt > a')
             if not ele_a:
                 continue
-            link = ele_a[0].get('href')
-            title = ele_a[0].get_text().strip()
-            subgroups.append({
-                'title': title,
-                'link': link,
-            })
+            info['link'] = ele_a[0].get('href')
+            info['title'] = ele_a[0].get_text().strip()
+            sublist = item.select('div.sublist > table td.first > a')
+            if sublist:
+                info['sublist'] = [sub['title'] for sub in sublist]
+            subgroups.append(info)
         return subgroups
 
     def _parse_sublist_html(self, doc):
         soup = bs4.BeautifulSoup(doc, 'lxml')
         subinfo_list = []
-        ele_tr_list = soup.select(
-            'div.subs > table tr.odd, div.subs > table tr.even')
+        ele_tr_list = soup.select('div.subs > table tr')
         if not ele_tr_list:
             return subinfo_list
         for tr in ele_tr_list:
-            subinfo = {
-                'title': '',
-                'link': '',
-                'author': '',
-                'exts': [],
-                'languages': [],
-                'rate': 0,
-                'download_count': 0,
-            }
+            subinfo = SubInfo()
             ele_td = tr.find('td', class_='first')
-            if ele_td:
-                # 字幕标题
-                subinfo['title'] = ele_td.a.get('title').strip()
-                # 链接
-                subinfo['link'] = ele_td.a.get('href').strip()
-                # 格式
-                ele_span_list = ele_td.select('span.label.label-info')
-                for ele_span in ele_span_list:
-                    ext = ele_span.get_text().strip()
-                    ext = ext.lower()
-                    ext = ext.split('/')
-                    subinfo['exts'].extend(ext)
-                # 作者
-                ele_span = ele_td.select('span > a > span.label.label-danger')
-                if ele_span:
-                    subinfo['author'] = ele_span[0].get_text().strip()
+            if not ele_td:
+                continue
+            # 字幕标题
+            subinfo['title'] = ele_td.a.get('title').strip()
+            # 链接
+            subinfo['link'] = ele_td.a.get('href').strip()
+            # 格式
+            ele_span_list = ele_td.select('span.label.label-info')
+            for ele_span in ele_span_list:
+                ext = ele_span.get_text().strip()
+                ext = ext.lower()
+                ext = ext.split('/')
+                subinfo['exts'].extend(ext)
+            # 作者
+            ele_span = ele_td.select('span > a > span.label.label-danger')
+            if ele_span:
+                subinfo['author'] = ele_span[0].get_text().strip()
             # 语言
             ele_imgs = tr.select('td.tac.lang > img')
             if ele_imgs:
                 for ele_img in ele_imgs:
-                    language = ele_img.get('title', ele_img.get('alt'))
-                    language = self.LANGUAGES_MAP.get(language)
-                    subinfo['languages'].append(language)
+                    language = ele_img.get('title')
+                    if not language:
+                        language = ele_img.get('alt')
+                    for l1, l2 in self.LANGUAGES_MAP.items():
+                        if l1 in language:
+                            subinfo['languages'].append(l2)
             # 评分
             ele_i = tr.select('td.tac i.rating-star')
             if ele_i:
@@ -123,8 +108,7 @@ class ZimukuSubSearcher(BaseSubSearcher):
             ele_td = tr.select('td.tac')
             if ele_td:
                 ele_td = ele_td[-1]
-                subinfo['download_count'] = self._parse_downloadcount(
-                    ele_td.get_text().strip())
+                subinfo['download_count'] = self._parse_downloadcount( ele_td.get_text().strip())
             subinfo_list.append(subinfo)
         return subinfo_list
 
@@ -133,58 +117,79 @@ class ZimukuSubSearcher(BaseSubSearcher):
         """
         if not subgroups:
             return None
-        return subgroups[0]
+        videoinfo = self.videoinfo
+        season = videoinfo['season']
+        if season == 0:
+            return subgroups[0]['link']
+        for sg in subgroups:
+            title = sg['title']
+            sublist = sg['sublist']
+            for sub in sublist:
+                videoinfo_ = self._parse_videoname(sub)
+                season_ = videoinfo_['season']
+                if season == season_:
+                    return sg['link']
+        return subgroups[0]['link']
 
-    def _get_subinfo_list(self, videoname):
+    def _try_js_redirect(self, doc):
+        pattern = r'url\s*=\s*[\'"]([^;\'"]+?)[\'"]\s*\+\s*url;'
+        matches = re.findall(pattern, doc)
+        path = ''.join(reversed(matches))
+        return path
+
+    def _get_subinfo_list(self, keyword):
         """ return subinfo_list of videoname
         """
         # searching subtitles
-        res = self.session.get(self.API_URL, params={'q': videoname})
+        res = self.session.get(self.API_URL, params={'q': keyword}, headers={'Referer': self.referer})
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         subgroups = self._parse_search_results_html(doc)
-        if not subgroups:
-            self._debug('no subgroups')
-            return [], referer                   
-        subgroup = self._filter_subgroup(subgroups)
+        retry_count = 0
+        while not subgroups and retry_count < self.MAX_RETRY_COUNT:
+            self._debug('retry_count: {}, no subgroups, maybe js redirect'.format(retry_count))
+            redirect_url = self._try_js_redirect(doc)
+            if not redirect_url:
+                self._debug('no luck, can\'t find any js redirect url')
+                return []
+            redirect_url = self._join_url(self.referer, redirect_url)
+            self._debug('redirect url: {}'.format(redirect_url))
+            res = self.session.get(redirect_url, headers={'Referer': self.referer})
+            doc = res.text
+            self.referer = res.url
+            subgroups = self._parse_search_results_html(doc)
+            retry_count += 1
+            time.sleep(0.8)
 
+        subtitle_url = self._filter_subgroup(subgroups)
+        subtitle_url = self._join_url(self.API_URL, subtitle_url)
         # get subtitles
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(self._join_url(
-            self.API_URL, subgroup['link']), headers=headers)
+        res = self.session.get(subtitle_url, headers={'Referer': self.referer})
         doc = res.text
-        referer = res.url
+        self.referer = res.url
         subinfo_list = self._parse_sublist_html(doc)
         for subinfo in subinfo_list:
             subinfo['link'] = self._join_url(res.url, subinfo['link'])
-        return subinfo_list, referer
+        return subinfo_list
 
-    def _visit_detailpage(self, detailpage_link, referer):
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(detailpage_link, headers=headers)
-        doc = res.content
-        referer = res.url
+    def _visit_detailpage(self, detailpage_link):
+        res = self.session.get(detailpage_link, headers={'Referer': self.referer})
+        doc = res.text
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         ele_a_list = soup.select('a#down1')
         if not ele_a_list:
             return None
         ele_a = ele_a_list[0]
         downloadpage_link = self._join_url(res.url, ele_a.get('href'))
-        return downloadpage_link, referer
+        return downloadpage_link
 
-    def _visit_downloadpage(self, downloadpage_link, referer):
+    def _visit_downloadpage(self, downloadpage_link):
         """ get the real download link of subtitles.
         """
-        headers = {
-            'Referer': referer
-        }
-        res = self.session.get(downloadpage_link, headers=headers)
+        res = self.session.get(downloadpage_link, headers={'Referer': self.referer})
         doc = res.content
-        referer = res.url
+        self.referer = res.url
         soup = bs4.BeautifulSoup(doc, 'lxml')
         ele_a_list = soup.select('a.btn.btn-sm')
         if not ele_a_list:
@@ -192,54 +197,4 @@ class ZimukuSubSearcher(BaseSubSearcher):
         ele_a = ele_a_list[1]
         download_link = ele_a.get('href')
         download_link = self._join_url(res.url, download_link)
-        return download_link, referer
-
-    def _search_subs(self, videofile, languages, exts, keyword=None):
-        videoname = self._get_videoname(videofile)  # basename, not include ext
-        videoinfo = self._parse_videoname(videoname)
-        if keyword is None:
-            keyword = self._gen_keyword(videoinfo)
-
-        self._debug('keyword: {}'.format(keyword))
-        self._debug('videoinfo: {}'.format(videoinfo))
-
-        # try find subinfo_list from self._cache
-        if keyword not in self._cache:
-            subinfo_list, referer = self._get_subinfo_list(keyword)
-            self._cache[keyword] = (subinfo_list, referer)
-        else:
-            subinfo_list, referer = self._cache.get(keyword)
-
-        self._debug('subinfo_list: {}'.format(subinfo_list))
-
-        subinfo = self._filter_subinfo_list(
-            subinfo_list, videoinfo, languages, exts)
-
-        self._debug('subinfo: {}'.format(subinfo))
-
-        if not subinfo:
-            return []
-
-        downloadpage_link, referer = self._visit_detailpage(
-            subinfo['link'], referer)
-        self._debug('downloadpage_link: {}'.format(downloadpage_link))
-        subtitle_download_link, referer = self._visit_downloadpage(
-            downloadpage_link, referer)
-        self._debug('subtitle_download_link: {}'.format(
-            subtitle_download_link))
-        filepath, referer = self._download_subs(
-            subtitle_download_link, videofile, referer, subinfo['title'])
-
-        self._debug('filepath: {}'.format(filepath))
-
-        subs = self._extract(filepath, videofile, exts)
-
-        self._debug('subs: {}'.format(subs))
-
-        return [{
-            'link': referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }]
+        return download_link
