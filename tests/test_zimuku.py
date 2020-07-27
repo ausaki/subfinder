@@ -45,8 +45,7 @@ def test_parse_download_count(zimuku):
         assert c == count
 
 def test_parse(videofile: pathlib.Path):
-    subfinder = SubFinder(subsearcher_class=ZimukuSubSearcher)
-    zimuku: ZimukuSubSearcher = subfinder.subsearcher[0]
+    zimuku: ZimukuSubSearcher = ZimukuSubSearcher(SubFinder())
     zimuku._prepare_search_subs(videofile)
     subinfo_list = zimuku._get_subinfo_list(zimuku.keywords[0])
     assert subinfo_list

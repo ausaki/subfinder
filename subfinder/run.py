@@ -16,8 +16,7 @@ from . import __version__
 def find_method(m):
     s = get_subsearcher(m)
     if s is None:
-        raise argparse.ArgumentTypeError(
-            'Cant found SubSearcher named {}'.format(m))
+        raise argparse.ArgumentTypeError( 'Cant found SubSearcher named {}'.format(m))
     return s
 
 
@@ -25,9 +24,9 @@ def method_msg():
     all_subsearchers = get_all_subsearchers()
     support_methods = ', '.join(all_subsearchers.keys())
     default_subsearcher = get_subsearcher('default')
-    msg = '''what's methods you want to use to searching subtitles, defaults to {default}.
+    msg = '''methods use to search subtitles, default is using all methods.
             support methods: {support_methods}
-        '''.format(default=default_subsearcher.__name__, support_methods=support_methods)
+        '''.format(support_methods=support_methods)
     return msg
 
 

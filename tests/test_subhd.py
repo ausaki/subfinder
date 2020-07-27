@@ -26,8 +26,7 @@ def test_exts(subhd):
         subhd._check_exts(['fage_ext'])
 
 def test_parse(videofile: pathlib.Path):
-    subfinder = SubFinder(subsearcher_class=SubHDSubSearcher)
-    subhd: SubHDSubSearcher = subfinder.subsearcher[0]
+    subhd: SubHDSubSearcher = SubHDSubSearcher(SubFinder())
     subhd._prepare_search_subs(videofile)
     subinfo_list = subhd._get_subinfo_list(subhd.keywords[0])
     assert subinfo_list

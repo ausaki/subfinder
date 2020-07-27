@@ -1,8 +1,8 @@
 # -*- coding: utf8 -*-
 from __future__ import unicode_literals, print_function
 import re
-from re import match
 import bs4
+import time
 from .subsearcher import HTMLSubSearcher, SubInfo
 
 
@@ -14,7 +14,8 @@ class ZimukuSubSearcher(HTMLSubSearcher):
 
     API_URL = 'http://www.zimuku.la/search/'
 
-    _cache = {}
+    MAX_RETRY_COUNT = 5
+
     shortname = 'zimuku'
 
     def _parse_downloadcount(self, text):
@@ -144,20 +145,21 @@ class ZimukuSubSearcher(HTMLSubSearcher):
         doc = res.text
         self.referer = res.url
         subgroups = self._parse_search_results_html(doc)
-        if not subgroups:
-            self._debug('no subgroups, maybe js redirect')
+        retry_count = 0
+        while not subgroups and retry_count < self.MAX_RETRY_COUNT:
+            self._debug('retry_count: {}, no subgroups, maybe js redirect'.format(retry_count))
             redirect_url = self._try_js_redirect(doc)
             if not redirect_url:
                 self._debug('no luck, can\'t find any js redirect url')
                 return []
             redirect_url = self._join_url(self.referer, redirect_url)
+            self._debug('redirect url: {}'.format(redirect_url))
             res = self.session.get(redirect_url, headers={'Referer': self.referer})
             doc = res.text
             self.referer = res.url
             subgroups = self._parse_search_results_html(doc)
-            if not subgroups:
-                self._debug('last try, no subgroups')
-                return []
+            retry_count += 1
+            time.sleep(0.8)
 
         subtitle_url = self._filter_subgroup(subgroups)
         subtitle_url = self._join_url(self.API_URL, subtitle_url)

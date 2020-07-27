@@ -28,8 +28,7 @@ def test_exts(zimuzu):
 
 
 def test_parse(videofile: pathlib.Path):
-    subfinder = SubFinder(subsearcher_class=ZimuzuSubSearcher)
-    zimuzu: ZimuzuSubSearcher = subfinder.subsearcher[0]
+    zimuzu: ZimuzuSubSearcher = ZimuzuSubSearcher(SubFinder())
     zimuzu._prepare_search_subs(videofile)
     subinfo_list = zimuzu._get_subinfo_list(zimuzu.keywords[0])
     assert subinfo_list

@@ -14,7 +14,6 @@ from .zimuzu import ZimuzuSubSearcher
 from .subhd import SubHDSubSearcher
 
 def _register_internal_subsearcher():
-    register_subsearcher('default', ShooterSubSearcher)
     register_subsearcher(ShooterSubSearcher.shortname, ShooterSubSearcher)
     register_subsearcher(ZimukuSubSearcher.shortname, ZimukuSubSearcher)
     register_subsearcher(ZimuzuSubSearcher.shortname, ZimuzuSubSearcher)

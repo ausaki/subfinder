@@ -58,7 +58,7 @@ def test_parse_videoname():
         }
     }
     for name, info in test_cases.items():
-        info_ = BaseSubSearcher._parse_videoname(name)
+        info_ = HTMLSubSearcher._parse_videoname(name)
         assert info == info_
 
 

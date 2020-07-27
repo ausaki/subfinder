@@ -60,15 +60,15 @@ class BaseSubSearcher(object):
     shortname = 'base_subsearcher'
     API_URL = ''
 
-    def __init__(self, subfinder,  **kwargs):
+    def __init__(self, subfinder,  api_urls=None, **kwargs):
         """
         subfinder: SubFinder
-        debug: 是否输出调试信息
+        api_urls: api_urls
         """
         self.session = requests.session()
         self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
         self.subfinder = subfinder
-        self.api_urls = kwargs.get('api_urls', {})
+        self.api_urls = api_urls if api_urls else {}
         self.API_URL = self.api_urls.get(self.shortname, self.__class__.API_URL)
 
         self.languages = ''
@@ -101,6 +101,72 @@ class BaseSubSearcher(object):
         """ join absolute `url` and `path`(href)
         """
         return urlparse.urljoin(url, path)
+
+    @abstractmethod
+    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
+        """ search subtitles of videofile.
+
+        `videofile` is the absolute(or relative) path of the video file.
+
+        `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
+        implemention of subclass. `languages` accepts one language or a list of language
+
+        `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
+        depende on implemention of subclass. `ext` accepts one ext or a list of ext
+
+        `keyword` is used to searching on the subtitle website.
+
+        return a list of subtitle info
+        [
+            {
+                'link': '',     # download link
+                'language': '', # language
+                'ext': '',      # ext
+                'subname': '',  # the filename of subtitles
+                'downloaded': False, # it's tell `SubFinder` whether need to download.
+            },
+            {
+                'link': '',
+                'language': '',
+                'ext': '',
+                'subname': '',
+            },
+            ...
+        ]
+        - `link`, it's optional, but if `downloaded` is False, then `link` is required.
+        - `language`, it's optional
+        - `subname`, it's optional, but if `downloaded` is False, then `subname` is required.
+        - `downloaded`, `downloaded` is required.
+            if `downloaded` is True, then `SubFinder` will not download again,
+            otherwise `SubFinder` will download link.
+        """
+        pass
+
+    def __str__(self):
+        if hasattr(self.__class__, 'shortname'):
+            name = self.__class__.shortname
+        else:
+            name = self.__class__.__name__
+        return '<{}>'.format(name)
+
+    def __unicode__(self):
+        return self.__str__()
+
+
+class HTMLSubSearcher(BaseSubSearcher):
+    __metaclass__ = ABCMeta
+
+    LANGUAGES_MAP = {
+        '简体': 'zh_chs',
+        '繁體': 'zh_cht',
+        'English': 'en',
+        'english': 'en',
+        '英文': 'en',
+        '双语': 'zh_en',
+        '中英': 'zh_en',
+    }
+    COMMON_LANGUAGES = ['简体', '繁体', '英文']
+    shortname = 'html_subsearcher'
 
     @classmethod
     def _get_videoname(cls, videofile):
@@ -254,105 +320,6 @@ class BaseSubSearcher(object):
         res.close()
         return filepath
 
-    @abstractmethod
-    def _search_subs(self):
-        """
-        subclass should implement this private method.
-        """
-        pass
-
-    def _prepare_search_subs(self, videofile, languages=None, exts=None, keyword=None):
-        if languages is None:
-            languages = self.SUPPORT_LANGUAGES
-        elif isinstance(languages, str):
-            languages = [languages]
-        self._check_languages(languages)
-
-        if exts is None:
-            exts = self.SUPPORT_EXTS
-        elif isinstance(exts, str):
-            exts = [exts]
-        self._check_exts(exts)
-
-        self.languages = languages
-        self.exts = exts
-        self.videofile = videofile
-        self.videoname = self._get_videoname(videofile)  # basename, not include ext
-        self.videoinfo = self._parse_videoname(self.videoname)
-        if keyword is None:
-            keywords = self._gen_keyword(self.videoinfo)
-        else:
-            keywords = [keyword]
-        self.keywords = keywords
-
-    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
-        """ search subtitles of videofile.
-
-        `videofile` is the absolute(or relative) path of the video file.
-
-        `languages` is the language of subtitle, e.g chn, eng, the support for language is difference, depende on
-        implemention of subclass. `languages` accepts one language or a list of language
-
-        `exts` is the format of subtitle, e.g ass, srt, sub, idx, the support for ext is difference,
-        depende on implemention of subclass. `ext` accepts one ext or a list of ext
-
-        `keyword` is used to searching on the subtitle website.
-
-        return a list of subtitle info
-        [
-            {
-                'link': '',     # download link
-                'language': '', # language
-                'ext': '',      # ext
-                'subname': '',  # the filename of subtitles
-                'downloaded': False, # it's tell `SubFinder` whether need to download.
-            },
-            {
-                'link': '',
-                'language': '',
-                'ext': '',
-                'subname': '',
-            },
-            ...
-        ]
-        - `link`, it's optional, but if `downloaded` is False, then `link` is required.
-        - `language`, it's optional
-        - `subname`, it's optional, but if `downloaded` is False, then `subname` is required.
-        - `downloaded`, `downloaded` is required.
-            if `downloaded` is True, then `SubFinder` will not download again,
-            otherwise `SubFinder` will download link.
-        """
-        self._prepare_search_subs(videofile, languages, exts, keyword)
-        self._debug('keywords: {}'.format(self.keywords))
-        self._debug('videoinfo: {}'.format(self.videoinfo))
-        return self._search_subs()
-
-    def __str__(self):
-        if hasattr(self.__class__, 'shortname'):
-            name = self.__class__.shortname
-        else:
-            name = self.__class__.__name__
-        return '<{}>'.format(name)
-
-    def __unicode__(self):
-        return self.__str__()
-
-
-class HTMLSubSearcher(BaseSubSearcher):
-    __metaclass__ = ABCMeta
-
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        'English': 'en',
-        'english': 'en',
-        '英文': 'en',
-        '双语': 'zh_en',
-        '中英': 'zh_en',
-    }
-    COMMON_LANGUAGES = ['简体', '繁体', '英文']
-    shortname = 'html_subsearcher'
-
     @classmethod
     def _gen_keyword(cls, videoinfo):
         """ 获取关键词
@@ -439,6 +406,46 @@ class HTMLSubSearcher(BaseSubSearcher):
         """
         pass
 
+    def _prepare_search_subs(self, videofile, languages=None, exts=None, keyword=None):
+        if languages is None:
+            languages = self.SUPPORT_LANGUAGES
+        elif isinstance(languages, str):
+            languages = [languages]
+        self._check_languages(languages)
+
+        if exts is None:
+            exts = self.SUPPORT_EXTS
+        elif isinstance(exts, str):
+            exts = [exts]
+        self._check_exts(exts)
+
+        self.languages = languages
+        self.exts = exts
+        self.videofile = videofile
+        self.videoname = self._get_videoname(videofile)  # basename, not include ext
+        self.videoinfo = self._parse_videoname(self.videoname)
+        if keyword is None:
+            keywords = self._gen_keyword(self.videoinfo)
+        else:
+            keywords = [keyword]
+        self.keywords = keywords
+    
+    def search_subs(self, videofile, languages=None, exts=None, keyword=None):
+        self._prepare_search_subs(videofile, languages, exts, keyword)
+        self._debug('keywords: {}'.format(self.keywords))
+        self._debug('videoinfo: {}'.format(self.videoinfo))
+        subinfo = self._get_subinfo()
+        if not subinfo:
+            return []
+        subs = self._download_subs(subinfo)
+        return [{
+            'link': self.referer,
+            'language': subinfo['languages'],
+            'ext': subinfo['exts'],
+            'subname': subs,
+            'downloaded': True
+        }] if subs else []
+
     def _get_subinfo(self):
         subinfo = None
         for keyword in self.keywords:
@@ -460,19 +467,6 @@ class HTMLSubSearcher(BaseSubSearcher):
         subs = self._extract(filepath)
         self._debug('subs: {}'.format(subs))
         return subs
-
-    def _search_subs(self):
-        subinfo = self._get_subinfo()
-        if not subinfo:
-            return []
-        subs = self._download_subs(subinfo)
-        return [{
-            'link': self.referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }] if subs else []
 
 
 class VideoInfo(dict):
