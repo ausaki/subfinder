@@ -30,6 +30,7 @@ Table of Contents
   - [参考](#参考)
   - [License](#license)
   - [更新历史](#更新历史)
+    - [v2.0.1](#v201)
     - [v2.0.0](#v200)
     - [v1.1.4](#v114)
     - [v1.1.3](#v113)
@@ -294,6 +295,10 @@ Table of Contents
 [MIT License](LICENSE)
 
 ## 更新历史
+
+### v2.0.1
+
+- 修复打包错误.
 
 ### v2.0.0
 
