@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "subfinder"
-version = "2.0.1"
+version = "2.0.2"
 description = "subfinder -- a general finder for subtitles"
 authors = ["ausaki <ljm51689@gmail.com>"]
 repository = "https://github.com/ausaki/subfinder/"
@@ -9,13 +9,13 @@ keywords = ["subtitle", "subfinder", "shooter", "zimuku"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = ">=2.7,!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*"
+python = ">=3.5.0"
 requests = "*"
-bs4 = "^0.0.1"
 lxml = "*"
-gevent = "^1.4.0"
 rarfile = "*"
 six = "*"
+gevent = "^21.1.2"
+beautifulsoup4 = "^4.9.3"
 
 [tool.poetry.dev-dependencies]
 tox = "*"
