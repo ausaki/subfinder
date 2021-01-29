@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 import os
 from subfinder.subsearcher.subsearcher import get_all_subsearchers
+import re
 import sys
 import glob
 import fnmatch
@@ -184,23 +185,6 @@ class SubFinder(object):
                 break
         self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format( len(subinfos), basename))
 
-        if self.set_default:
-            def _subinfo_sortfunc(subinfo):
-                # TODO: zh-cn zh&en 简体 简体&英文等特殊情况未处理，内置优先级有待讨论
-                language_priority = {"zh": 2, "en": 1}
-                ext_priority = {"ass": 2, "srt": 1}
-                return (
-                    language_priority.get(subinfo["language"], 0),
-                    ext_priority.get(subinfo["ext"], 0),
-                )
-            subinfos.sort(key=_subinfo_sortfunc, reverse=True)
-            self.logger.debug("%s 默认字幕信息： %s", basename, subinfos[0])
-            defsub = subinfos[0]
-            # Strip .zh.srt from behind
-            defsub["subname"] = "{basename}.{lang}.default.{ext}".format(
-                basename=defsub["subname"].rsplit(".", maxsplit=2)[0],
-                lang=defsub["language"], ext=defsub["ext"],
-            )
         try:
             for subinfo in subinfos:
                 downloaded = subinfo.get('downloaded', False)
@@ -245,4 +229,30 @@ class SubFinder(object):
                 '{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
-        pass
+        if self.set_default:
+            pattern = re.compile(r'(?P<l>\.(?P<language>(zh|en)[\w-]{0,5}))?(?P<r>\.(?P<ext>[\w]{2,4}))$', re.I)
+
+            def _subinfo_sortfunc(match):
+                language_priority = {"zh_en": 4, "zh_chs": 3, "zh": 3, "zh_cht": 2, "en": 1}
+                ext_priority = {"ass": 3, "ssa": 2, "srt": 1}
+                return (
+                    language_priority.get(match.group("language"), 0),
+                    ext_priority.get(match.group("ext"), 0),
+                )
+
+            for v, subs in self._history.items():
+                if not subs:
+                    continue
+                basename = os.path.basename(v)
+
+                # 将文件完整路径列表转换为 re.Match 匹配结果列表
+                matches = [pattern.search(sub) for sub in subs]
+                matches.sort(key=_subinfo_sortfunc, reverse=True)
+
+                match_def = matches[0]
+                self.logger.debug("%s: 设置 %s.%s 为默认字幕", basename, match_def.group("language") or "", match_def.group("ext"))
+
+                subpath = match_def.string
+                subpath_new = pattern.sub(r"\g<l>.default\g<r>", subpath, count=1)
+                self.logger.debug("Moving %s => %s", subpath, subpath_new)
+                os.rename(subpath, subpath_new)
