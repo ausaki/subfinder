@@ -57,6 +57,8 @@ class SubFinder(object):
         self.exclude = kwargs.get('exclude', [])
         # api urls
         self.api_urls = kwargs.get('api_urls', {})
+        # set default
+        self.set_default = kwargs.get('set_default', {})
 
         self._init_session()
         self._init_pool()
@@ -72,7 +74,7 @@ class SubFinder(object):
         self.subsearcher = subsearcher_class
 
     def _is_videofile(self, f):
-        """ determine whether `f` is a valid video file, mostly base on file extension 
+        """ determine whether `f` is a valid video file, mostly base on file extension
         """
         if os.path.isfile(f):
             types = mimetypes.guess_type(f)
@@ -181,6 +183,24 @@ class SubFinder(object):
             if subinfos:
                 break
         self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format( len(subinfos), basename))
+
+        if self.set_default:
+            def _subinfo_sortfunc(subinfo):
+                # TODO: zh-cn zh&en 简体 简体&英文等特殊情况未处理，内置优先级有待讨论
+                language_priority = {"zh": 2, "en": 1}
+                ext_priority = {"ass": 2, "srt": 1}
+                return (
+                    language_priority.get(subinfo["language"], 0),
+                    ext_priority.get(subinfo["ext"], 0),
+                )
+            subinfos.sort(key=_subinfo_sortfunc, reverse=True)
+            self.logger.debug("%s 默认字幕信息： %s", basename, subinfos[0])
+            defsub = subinfos[0]
+            # Strip .zh.srt from behind
+            defsub["subname"] = "{basename}.{lang}.default.{ext}".format(
+                basename=defsub["subname"].rsplit(".", maxsplit=2)[0],
+                lang=defsub["language"], ext=defsub["ext"],
+            )
         try:
             for subinfo in subinfos:
                 downloaded = subinfo.get('downloaded', False)
