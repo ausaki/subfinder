@@ -75,9 +75,9 @@ def run(subfinder_class):
     parser.add_argument('--api_urls',
                         type=json.loads,
                         help="specify the api urls with JSON")
-    parser.add_argument('--set_default',
+    parser.add_argument('--no-order-marker',
                         action='store_true',
-                        help="Set `default` flag to preferred subtitle")
+                        help="if this option is enabled, SubFinder will not add 'order marker' into subtitle filename")
     parser.add_argument('-s', '--silence',
                         action='store_true',
                         help="don't print anything, default to False")
@@ -113,7 +113,7 @@ def run(subfinder_class):
         method = conf_dict['method']
         new_method = [find_method(m) for m in method]
         conf_dict['method'] = new_method
-
+    
     # merge config file and options of cmd
     for opt, val in args.__dict__.items():
         # val is default value
@@ -121,7 +121,7 @@ def run(subfinder_class):
             continue
         # otherwise overwrite value in config file
         conf_dict[opt] = val
-
+    
     root = conf_dict.pop('path')
     subfinder = subfinder_class(path=root,
                                 subsearcher_class=conf_dict['method'] if 'method' in conf_dict else None,
