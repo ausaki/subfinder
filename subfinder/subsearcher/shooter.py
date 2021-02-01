@@ -24,12 +24,12 @@ class ShooterSubSearcher(BaseSubSearcher):
             languages = self.SUPPORT_LANGUAGES
         elif isinstance(languages, str):
             languages = [languages]
-        self._check_languages(languages)
+        # self._check_languages(languages)
         if exts is None:
             exts = self.SUPPORT_EXTS
         elif isinstance(exts, str):
             exts = [exts]
-        self._check_exts(exts)
+        # self._check_exts(exts)
         filehash = self._compute_video_hash(videofile)
         root, basename = os.path.split(videofile)
         payload = {'filehash': filehash,
@@ -59,27 +59,39 @@ class ShooterSubSearcher(BaseSubSearcher):
                     ext_ = ext_.lower()
                     link = item['Link']
                     if ext_ in exts and ext_ not in ext_set:
+                        prio = ''
+                        if not self.subfinder.no_order_marker:
+                            lang_prio = self.language_priority.get(language, max(self.language_priority.values()))
+                            ext_prio = self.ext_priority.get(ext_, max(self.ext_priority.values()))
+                            # we should make sure that max(self.ext_priority) is less than 10
+                            prio = lang_prio * 10 + ext_prio
+                            prio = '{:05d}'.format(prio)
+                        subname = self._gen_subname(videofile, language, ext_, prio)
+                        ext_set.add(ext_)
+                        subpath = os.path.join(os.path.dirname(videofile), subname)
                         subinfos.append({
                             'link': link,
                             'language': language,
-                            'subname': self._gen_subname(videofile, language, ext_),
+                            'subname': subpath,
                             'ext': ext_,
-                            'downloaded': False
                         })
-                        ext_set.add(ext_)
+                        res = self.session.get(link, stream=True)
+                        with open(subpath, 'wb') as fp:
+                            for chunk in res.iter_content(8192):
+                                fp.write(chunk)
         return subinfos
 
-    @staticmethod
-    def _gen_subname(videofile, language, ext):
+    @classmethod
+    def _gen_subname(cls, videofile, language, ext, prio=''):
         """ generate filename of subtitles
-        :TODO: fix the conflict of subname
         """
         root, basename = os.path.split(videofile)
         name, _ = os.path.splitext(basename)
-        subname = '{basename}.{language}.{ext}'.format(
+        subname = '{basename}{prio}.{language}.{ext}'.format(
             basename=name,
             language=language,
-            ext=ext)
+            ext=ext,
+            prio=prio)
         return subname
 
     @staticmethod

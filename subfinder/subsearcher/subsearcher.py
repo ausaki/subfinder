@@ -53,13 +53,23 @@ class BaseSubSearcher(object):
     - search_subs
     """
     __metaclass__ = ABCMeta
-
+    LANGUAGES_MAP = {
+        '简体': 'zh_chs',
+        '繁體': 'zh_cht',
+        'English': 'en',
+        'english': 'en',
+        '英文': 'en',
+        '双语': 'zh_en',
+        '中英': 'zh_en',
+    }
+    LANGUAGE_PRIORITY = {"zh_en": 1, "zh_chs": 2, "zh": 3, "zh_cht": 4, "en": 5}
+    EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
     SUPPORT_LANGUAGES = []
     SUPPORT_EXTS = []
     shortname = 'base_subsearcher'
     API_URL = ''
 
-    def __init__(self, subfinder,  api_urls=None, **kwargs):
+    def __init__(self, subfinder,  api_urls=None):
         """
         subfinder: SubFinder
         api_urls: api_urls
@@ -70,14 +80,17 @@ class BaseSubSearcher(object):
         self.api_urls = api_urls if api_urls else {}
         self.API_URL = self.api_urls.get(self.shortname, self.__class__.API_URL)
 
-        self.languages = ''
-        self.exts = ''
-        self.videofile = ''
-        self.videoname = ''
-        self.videoinfo = {}
-        self.keywords = []
-        self.referer = ''
-
+        language_priority =  self.subfinder.languages
+        if language_priority:
+            self.language_priority = dict(zip(language_priority, range(1, len(language_priority) + 1)))
+        else:
+            self.language_priority = self.LANGUAGE_PRIORITY
+        ext_priority = self.subfinder.exts
+        if ext_priority:
+            self.ext_priority = dict(zip(ext_priority, range(1, len(ext_priority) + 1)))
+        else:
+            self.ext_priority = self.EXT_PRIORITY
+        
     def _debug(self, msg):
         self.subfinder.logger.debug(msg)
 
@@ -100,6 +113,108 @@ class BaseSubSearcher(object):
         """ join absolute `url` and `path`(href)
         """
         return urlparse.urljoin(url, path)
+    
+    @classmethod
+    def _get_videoname(cls, videofile):
+        """parse the `videofile` and return it's basename
+        """
+        name = os.path.basename(videofile)
+        name = os.path.splitext(name)[0]
+        return name
+
+    def _calc_subtitle_file_prio(self, subtitle_file):
+        lang_prio = max_lang_prio = max(self.language_priority.values())
+        langs = set()
+        f = os.path.basename(subtitle_file)
+        for lang_name, lang_code in self.LANGUAGES_MAP.items():
+            # it's not possile that a filename starts with a language mark.
+            # so we use '>' rather than '>='.   
+            if f.rfind(lang_name) > 0 or f.rfind(lang_code) > 0:
+                langs.add(lang_code)
+                lang_prio = min(lang_prio, self.language_priority.get(lang_code, max_lang_prio))
+        
+        # it's possible that subtitle filename contains both 'en' and 'zh'('zh_chs' or 'zh_cht').
+        # in this case, we should treat it as 'zh_en'.
+        if 'en' in langs and ('zh' in langs or 'zh_chs' in langs or 'zh_cht' in langs):
+            lang_prio = self.language_priority.get('zh_en', max_lang_prio)
+        
+        _, ext = os.path.splitext(f)
+        ext = ext[1:]
+        ext_prio = self.ext_priority.get(ext, max(self.ext_priority.values()))
+        # we should make sure that max(self.ext_priority) is less than 10
+        return lang_prio * 10 + ext_prio
+
+    @classmethod
+    def _gen_subname(cls, origin_file, videofile, language=None, ext=None, prio=''):
+        if not language:
+            language_ = []
+            try:
+                for l in cls.LANGUAGES_MAP:
+                    # it's not possile that a filename starts with a language mark.
+                    # so we use '>' rather than '>='.
+                    if origin_file.find(l) > 0: 
+                        language_.append(l)
+            except Exception:
+                pass
+            language = '&'.join(language_)
+        if language and not language.startswith('.'):
+            language = '.' + language
+
+        basename = os.path.basename(videofile)
+        basename, _ = os.path.splitext(basename)
+        if not ext:
+            _, ext = os.path.splitext(origin_file)
+        if not ext.startswith('.'):
+            ext = '.' + ext
+
+        return '{basename}{prio}{language}{ext}'.format(basename=basename, language=language, ext=ext, prio=prio)
+
+    @classmethod
+    def _parse_videoname(cls, videoname):
+        """ parse videoname and return video info dict
+        video info contains:
+        - title, the name of video
+        - sub_title, the sub_title of video
+        - resolution,
+        - source,
+        - season, defaults to 0
+        - episode, defaults to 0
+        """
+        info = VideoInfo()
+        mapping = {
+            'resolution': cls.RE_RESOLUTION,
+            'source': cls.RE_SOURCE,
+            'audio_encoding': cls.RE_AUDIO_ENC,
+            'video_encoding': cls.RE_VIDEO_ENC
+        }
+        index = len(videoname)
+        m = cls.RE_SEASON_EPISODE.search(videoname)
+        if m:
+            info['season'] = int(m.group('season'))
+            info['episode'] = int(m.group('episode'))
+            index, _ = m.span()
+            info['title'] = videoname[0:index].strip('.')
+        else:
+            m = cls.RE_SEASON.search(videoname)
+            if m:
+                info['season'] = int(m.group('season'))
+                index, _ = m.span()
+                info['title'] = videoname[0:index].strip('.')
+
+        for k, r in mapping.items():
+            m = r.search(videoname)
+            if m:
+                info[k] = m.group(k)
+                i, e = m.span()
+                if info['title'] == '' or i < index:
+                    index = i
+                    info['title'] = videoname[0:index].strip('.')
+
+        if info['title'] == '':
+            i = videoname.find('.')
+            info['title'] = videoname[:i] if i > 0 else videoname
+
+        return info
 
     @abstractmethod
     def search_subs(self, videofile, languages=None, exts=None, keyword=None):
@@ -155,25 +270,7 @@ class BaseSubSearcher(object):
 class HTMLSubSearcher(BaseSubSearcher):
     __metaclass__ = ABCMeta
 
-    LANGUAGES_MAP = {
-        '简体': 'zh_chs',
-        '繁體': 'zh_cht',
-        'English': 'en',
-        'english': 'en',
-        '英文': 'en',
-        '双语': 'zh_en',
-        '中英': 'zh_en',
-    }
-    COMMON_LANGUAGES = ['简体', '繁体', '英文']
     shortname = 'html_subsearcher'
-
-    @classmethod
-    def _get_videoname(cls, videofile):
-        """parse the `videofile` and return it's basename
-        """
-        name = os.path.basename(videofile)
-        name = os.path.splitext(name)[0]
-        return name
 
     RE_SEASON = re.compile(
         r'[Ss](?P<season>\d+)\.?')
@@ -186,74 +283,18 @@ class HTMLSubSearcher(BaseSubSearcher):
         r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
     RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
 
-    @classmethod
-    def _parse_videoname(cls, videoname):
-        """ parse videoname and return video info dict
-        video info contains:
-        - title, the name of video
-        - sub_title, the sub_title of video
-        - resolution,
-        - source,
-        - season, defaults to 0
-        - episode, defaults to 0
-        """
-        info = VideoInfo()
-        mapping = {
-            'resolution': cls.RE_RESOLUTION,
-            'source': cls.RE_SOURCE,
-            'audio_encoding': cls.RE_AUDIO_ENC,
-            'video_encoding': cls.RE_VIDEO_ENC
-        }
-        index = len(videoname)
-        m = cls.RE_SEASON_EPISODE.search(videoname)
-        if m:
-            info['season'] = int(m.group('season'))
-            info['episode'] = int(m.group('episode'))
-            index, _ = m.span()
-            info['title'] = videoname[0:index].strip('.')
-        else:
-            m = cls.RE_SEASON.search(videoname)
-            if m:
-                info['season'] = int(m.group('season'))
-                index, _ = m.span()
-                info['title'] = videoname[0:index].strip('.')
+    def __init__(self, subfinder, api_urls):
+        super().__init__(subfinder, api_urls=api_urls)
+        
+        # the following attrs will be init at `self._prepare_search_subs` method.
+        self.languages = ''
+        self.exts = ''
+        self.videofile = ''
+        self.videoname = ''
+        self.videoinfo = {}
+        self.keywords = []
+        self.referer = ''
 
-        for k, r in mapping.items():
-            m = r.search(videoname)
-            if m:
-                info[k] = m.group(k)
-                i, e = m.span()
-                if info['title'] == '' or i < index:
-                    index = i
-                    info['title'] = videoname[0:index].strip('.')
-
-        if info['title'] == '':
-            i = videoname.find('.')
-            info['title'] = videoname[:i] if i > 0 else videoname
-
-        return info
-
-    def _gen_subname(self, origin_file, language=None, ext=None):
-        if not language:
-            language_ = []
-            try:
-                for l in self.COMMON_LANGUAGES:
-                    if origin_file.find(l) >= 0:
-                        language_.append(l)
-            except Exception:
-                pass
-            language = '&'.join(language_)
-        if language and not language.startswith('.'):
-            language = '.' + language
-
-        basename = os.path.basename(self.videofile)
-        basename, _ = os.path.splitext(basename)
-        if not ext:
-            _, ext = os.path.splitext(origin_file)
-        if not ext.startswith('.'):
-            ext = '.' + ext
-
-        return '{basename}{language}{ext}'.format(basename=basename, language=language, ext=ext)
 
     def _extract(self, compressed_file):
         """ 解压字幕文件，如果无法解压，则直接返回 compressed_file。
@@ -273,7 +314,11 @@ class HTMLSubSearcher(BaseSubSearcher):
             ext = ext[1:]
             if self.exts and ext not in self.exts:
                 continue
-            subname = self._gen_subname(origin_file)
+            prio = ''
+            if not self.subfinder.no_order_marker:
+                prio = self._calc_subtitle_file_prio(origin_file)
+                prio = '.{:05d}'.format(prio)
+            subname = self._gen_subname(origin_file, self.videofile, prio=prio)
             subpath = os.path.join(root, subname)
             cf.extract(name, subpath)
             subs.append(subpath)
@@ -410,13 +455,11 @@ class HTMLSubSearcher(BaseSubSearcher):
             languages = self.SUPPORT_LANGUAGES
         elif isinstance(languages, str):
             languages = [languages]
-        self._check_languages(languages)
 
         if exts is None:
             exts = self.SUPPORT_EXTS
         elif isinstance(exts, str):
             exts = [exts]
-        self._check_exts(exts)
 
         self.languages = languages
         self.exts = exts

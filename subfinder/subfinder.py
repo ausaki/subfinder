@@ -58,14 +58,16 @@ class SubFinder(object):
         self.exclude = kwargs.get('exclude', [])
         # api urls
         self.api_urls = kwargs.get('api_urls', {})
-        # set default
-        self.set_default = kwargs.get('set_default', {})
+        # no-order-marker
+        self.no_order_marker = kwargs.get('no_order_marker', False)
+
+        self.kwargs = kwargs
 
         self._init_session()
         self._init_pool()
         self._init_logger()
 
-        # _history: recoding downloading history
+        # _history: downloading history
         self._history = {}
 
         if subsearcher_class is None:
@@ -184,26 +186,11 @@ class SubFinder(object):
             if subinfos:
                 break
         self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format( len(subinfos), basename))
-
-        try:
-            for subinfo in subinfos:
-                downloaded = subinfo.get('downloaded', False)
-                if downloaded:
-                    if isinstance(subinfo['subname'], (list, tuple)):
-                        self._history[videofile].extend(subinfo['subname'])
-                    else:
-                        self._history[videofile].append(subinfo['subname'])
-                else:
-                    link = subinfo.get('link')
-                    subname = subinfo.get('subname')
-                    subpath = os.path.join(os.path.dirname(videofile), subname)
-                    res = self.session.get(link, stream=True)
-                    with open(subpath, 'wb') as fp:
-                        for chunk in res.iter_content(8192):
-                            fp.write(chunk)
-                    self._history[videofile].append(subpath)
-        except Exception as e:
-            self.logger.error(str(e))
+        for subinfo in subinfos:
+            if isinstance(subinfo['subname'], (list, tuple)):
+                self._history[videofile].extend(subinfo['subname'])
+            else:
+                self._history[videofile].append(subinfo['subname'])
 
     def set_path(self, path):
         path = os.path.abspath(path)
@@ -229,30 +216,4 @@ class SubFinder(object):
                 '{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
-        if self.set_default:
-            pattern = re.compile(r'(?P<l>\.(?P<language>(zh|en)[\w-]{0,5}))?(?P<r>\.(?P<ext>[\w]{2,4}))$', re.I)
-
-            def _subinfo_sortfunc(match):
-                language_priority = {"zh_en": 4, "zh_chs": 3, "zh": 3, "zh_cht": 2, "en": 1}
-                ext_priority = {"ass": 3, "ssa": 2, "srt": 1}
-                return (
-                    language_priority.get(match.group("language"), 0),
-                    ext_priority.get(match.group("ext"), 0),
-                )
-
-            for v, subs in self._history.items():
-                if not subs:
-                    continue
-                basename = os.path.basename(v)
-
-                # 将文件完整路径列表转换为 re.Match 匹配结果列表
-                matches = [pattern.search(sub) for sub in subs]
-                matches.sort(key=_subinfo_sortfunc, reverse=True)
-
-                match_def = matches[0]
-                self.logger.debug("%s: 设置 %s.%s 为默认字幕", basename, match_def.group("language") or "", match_def.group("ext"))
-
-                subpath = match_def.string
-                subpath_new = pattern.sub(r"\g<l>.default\g<r>", subpath, count=1)
-                self.logger.debug("Moving %s => %s", subpath, subpath_new)
-                os.rename(subpath, subpath_new)
+        pass
