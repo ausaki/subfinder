@@ -209,7 +209,7 @@ EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
 
 示例：
 
-```json
+```js
 {
   "languages": ["zh", "en", "zh_chs"],
   "exts": ["ass", "srt"],
