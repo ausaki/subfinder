@@ -146,7 +146,7 @@ Table of Contents
 
   配置示例：
 
-  ```
+  ```json
   {
     // 设置字幕库的搜索 API
     "zimuku": "http://www.zimuku.la/search",
