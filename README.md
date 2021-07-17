@@ -30,6 +30,7 @@ Table of Contents
   - [参考](#参考)
   - [License](#license)
   - [更新历史](#更新历史)
+    - [v2.2.1](#v221) 
     - [v2.2.0](#v220) 
     - [v2.1.0](#v210)
     - [v2.0.1](#v201)
@@ -307,7 +308,11 @@ EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
 ## 更新历史
 
 
-### v2.1.0
+### v2.2.1
+
+  - fix [#76](https://github.com/ausaki/subfinder/issues/76).
+
+### v2.2.0
 
 - 移除 zimuzu.
 
