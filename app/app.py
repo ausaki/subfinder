@@ -1,22 +1,16 @@
 # -*- coding: utf8 -*-
 import sys
-try:
-    import tkinter as tk
-    from tkinter import filedialog, messagebox
-    from queue import Queue, Empty
-except ImportError as e:
-    import Tkinter as tk
-    import tkFileDialog as filedialog
-    import tkMessageBox as messagebox
-    from Queue import Queue, Empty
+
+import tkinter as tk
+from tkinter import filedialog, messagebox
+from queue import Queue, Empty
 from threading import Thread
-import os
 from subfinder.subfinder_thread import SubFinderThread as SubFinder
 from subfinder.subsearcher import get_subsearcher
 from subfinder.run_thread import run
 
 
-class OutputStream():
+class OutputStream:
     def __init__(self, text_widget):
         self.text = text_widget
         self.msg_queue = Queue(100)
@@ -25,7 +19,7 @@ class OutputStream():
         while True:
             try:
                 msg = self.msg_queue.get(block=False)
-            except Empty as e:
+            except Empty:
                 break
             else:
                 self.text.configure(state='normal')
@@ -51,7 +45,6 @@ class OutputStream():
 
 
 class Application(tk.Frame, object):
-
     def __init__(self, master=None, cnf={}, **kw):
         super(Application, self).__init__(master, cnf, **kw)
         self.title = 'SubFinder'
@@ -74,13 +67,13 @@ class Application(tk.Frame, object):
             subfinder.start()
             subfinder.done()
 
-        subsearchers = [
-            get_subsearcher('shooter'), 
-            get_subsearcher('zimuku'),
-            get_subsearcher('zimuzu')
-        ]
-        t = Thread(target=start, args=[self.videofile, ], kwargs=dict(
-            logger_output=self._output, subsearcher_class=subsearchers))
+        t = Thread(
+            target=start,
+            args=[
+                self.videofile,
+            ],
+            kwargs=dict(logger_output=self._output),
+        )
         t.start()
 
     def _open_file(self):
@@ -91,13 +84,11 @@ class Application(tk.Frame, object):
 
     def _open(self, file_or_directory='file'):
         if file_or_directory == 'file':
-            self.videofile = filedialog.askopenfilename(initialdir='~/Downloads/test',
-                                                        filetypes=(
-                                                            ('Video files', '*.mkv *.avi *.mp4 *'), ),
-                                                        title="选择一个视频文件")
+            self.videofile = filedialog.askopenfilename(
+                initialdir='~/Downloads/test', filetypes=(('Video files', '*.mkv *.avi *.mp4 *'),), title="选择一个视频文件"
+            )
         elif file_or_directory == 'dir':
-            self.videofile = filedialog.askdirectory(initialdir='~/Downloads/test',
-                                                     title="选择一个目录")
+            self.videofile = filedialog.askdirectory(initialdir='~/Downloads/test', title="选择一个目录")
         self.label_selected['text'] = self.videofile
 
     def _display_msg(self):
@@ -105,12 +96,10 @@ class Application(tk.Frame, object):
         self.after(100, self._display_msg)
 
     def _create_widgets(self):
-        self.button_open_file = tk.Button(
-            self, text='选择文件', command=self._open_file)
+        self.button_open_file = tk.Button(self, text='选择文件', command=self._open_file)
         self.button_open_file.grid(row=0, column=0, sticky='nswe')
 
-        self.button_open_directory = tk.Button(
-            self, text='选择目录', command=self._open_directory)
+        self.button_open_directory = tk.Button(self, text='选择目录', command=self._open_directory)
         self.button_open_directory.grid(row=0, column=1, sticky='nswe')
 
         frame = tk.Frame(self)
@@ -121,8 +110,7 @@ class Application(tk.Frame, object):
         frame.grid(row=1, column=0, columnspan=2, sticky='nswe')
 
         self.button_start = tk.Button(self, text='开始', command=self._start)
-        self.button_start.grid(
-            row=2, column=0, columnspan=2, pady=20, sticky='nswe')
+        self.button_start.grid(row=2, column=0, columnspan=2, pady=20, sticky='nswe')
 
         frame = tk.Frame(self)
         self.text_logger = tk.Text(frame)

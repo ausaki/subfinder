@@ -1,11 +1,10 @@
 #! /usr/bin/env python
 
-from __future__ import unicode_literals, print_function
 import os
 import pytest
 from subfinder.subsearcher import ShooterSubSearcher
 from subfinder.subfinder import SubFinder
-from subfinder.subsearcher.exceptions import LanguageError, ExtError, ShooterAPIError
+from subfinder.subsearcher.exceptions import LanguageError, ExtError
 
 
 @pytest.fixture(scope='module')
@@ -14,12 +13,15 @@ def shooter():
     return s
 
 
-RIGHT_HASH = ('54b690dcdbd19e9675042612b9c25143;'
+RIGHT_HASH = (
+    '54b690dcdbd19e9675042612b9c25143;'
     '48d6d334d0c51066f39f09f796c4bebd;'
     'd422f9797befa81a0c2ae880b6ceaa34;'
-    'fddfb48e1bdd219fad1ae5ab2c4c01ed')
+    'fddfb48e1bdd219fad1ae5ab2c4c01ed'
+)
 
 VIDEOFILE = os.path.expanduser('~/Downloads/subfinder_test/Marvels.Agents.of.S.H.I.E.L.D.S05E21.720p.HDTV.x264-AVS.mkv')
+
 
 def test_compute_videohash(shooter):
     if not os.path.exists(VIDEOFILE):

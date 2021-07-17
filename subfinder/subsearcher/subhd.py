@@ -6,8 +6,8 @@ from .subsearcher import HTMLSubSearcher, SubInfo
 
 
 class SubHDSubSearcher(HTMLSubSearcher):
-    """ SubHD 字幕搜索器(https://subhd.tv)
-    """
+    """SubHD 字幕搜索器(https://subhd.tv)"""
+
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
 
@@ -18,17 +18,15 @@ class SubHDSubSearcher(HTMLSubSearcher):
     _cache = {}
     shortname = 'subhd'
 
-    def __init__(self, subfinder, **kwargs):
-        super(SubHDSubSearcher, self).__init__(subfinder, **kwargs)
+    def __init__(self, subfinder, api_urls=None):
+        super(SubHDSubSearcher, self).__init__(subfinder, api_urls=api_urls)
         self.API_SUBTITLE_DOWNLOAD = self.api_urls.get(
-            'subhd_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD)
-        self.API_SUBTITLE_PREVIEW = self.api_urls.get(
-            'subhd_api_subtitle_preview', self.__class__.API_SUBTITLE_PREVIEW
+            'subhd_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD
         )
+        self.API_SUBTITLE_PREVIEW = self.api_urls.get('subhd_api_subtitle_preview', self.__class__.API_SUBTITLE_PREVIEW)
 
     def _parse_search_results_html(self, doc):
-        """ parse search result html
-        """
+        """parse search result html"""
         soup = bs4.BeautifulSoup(doc, 'lxml')
         subinfo_list = []
         div_list = soup.select('div.mb-4')
@@ -71,12 +69,12 @@ class SubHDSubSearcher(HTMLSubSearcher):
         return subinfo_list
 
     def _get_subinfo_list(self, keyword):
-        """ return subinfo_list of keyword
-        """
+        """return subinfo_list of keyword"""
         # searching subtitles
         url = self.API_URL
-        if not url.endswith('/'): url += '/'
-        url += urllib.parse.quote(keyword) 
+        if not url.endswith('/'):
+            url += '/'
+        url += urllib.parse.quote(keyword)
         res = self.session.get(url)
         doc = res.text
         self.referer = res.url
@@ -87,7 +85,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
 
     def _visit_detailpage(self, detailpage_link):
         download_link = ''
-        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
+        res = self.session.get(detailpage_link, headers={'Referer': self.referer})
         if not res.ok:
             return download_link
         doc = res.text
@@ -110,7 +108,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
         else:
             self.subfinder.logger.info('遇到验证码, 尝试通过字幕预览下载, 如果失败请尝试手动下载: {}'.format(detailpage_link))
         return download_link
-    
+
     def _visit_downloadpage(self, downloadpage_link):
         pass
 
@@ -118,7 +116,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
         subs = []
         root = os.path.dirname(self.videofile)
         api_url = self._join_url(detailpage_link, self.API_SUBTITLE_PREVIEW)
-        res = self.session.get(detailpage_link, headers={ 'Referer': self.referer })
+        res = self.session.get(detailpage_link, headers={'Referer': self.referer})
         if not res.ok:
             return subs
         doc = res.text
@@ -128,7 +126,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
         if not a_list:
             return subs
         files = []
-        for a in  a_list:
+        for a in a_list:
             s = a.string.strip()
             if s == '预览':
                 sid = a.get('data-sid')
@@ -137,7 +135,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
                 ext = ext[1:]
                 if ext in self.exts:
                     files.append((sid, fname))
-        
+
         for sid, fname in files:
             params = {'dasid': sid, 'dafname': fname}
             resp = self.session.post(api_url, data=params)
@@ -157,7 +155,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
         return subs
 
     def _download_subtitle(self, subinfo):
-        subtitle_download_link = self._visit_detailpage( subinfo['link'])
+        subtitle_download_link = self._visit_detailpage(subinfo['link'])
         self._debug('subtitle_download_link: {}'.format(subtitle_download_link))
         subs = None
         if not subtitle_download_link:

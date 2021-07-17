@@ -1,16 +1,13 @@
 # -*- coding: utf-8 -*-
-from __future__ import print_function, unicode_literals
 import os
 import sys
 import glob
 import argparse
-import re
 from .subsearcher import BaseSubSearcher
 
 
 def rm_subtitles(path):
-    """ delete all subtitles in path recursively
-    """
+    """delete all subtitles in path recursively"""
     sub_exts = ['ass', 'srt', 'sub']
     count = 0
     for root, dirs, files in os.walk(path):
@@ -26,8 +23,7 @@ def rm_subtitles(path):
 
 
 def mv_videos(path):
-    """ move videos in sub-directory of path to path.
-    """
+    """move videos in sub-directory of path to path."""
     count = 0
     for f in os.listdir(path):
         f = os.path.join(path, f)
@@ -73,22 +69,19 @@ def rename_subtitle(source, template):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-d', '--delete-subs',
-                        help="delete all subtitles in PATH recursively.")
-    parser.add_argument('-m', '--move-videos',
-                        help="move all files(like videos, subtitles) in sub-directory of PATH to PATH.")
-    parser.add_argument('-r', '--rename-sub',
-                        nargs=2,
-                        help="rename subtitle.")
+    parser.add_argument('-d', '--delete-subs', help="delete all subtitles in PATH recursively.")
+    parser.add_argument(
+        '-m', '--move-videos', help="move all files(like videos, subtitles) in sub-directory of PATH to PATH."
+    )
+    parser.add_argument('-r', '--rename-sub', nargs=2, help="rename subtitle.")
 
     args = parser.parse_args()
 
     if args.delete_subs:
         # try to decode str to unicode in python2
         try:
-            args.delete_subs = args.delete_subs.decode(
-                sys.getfilesystemencoding())
-        except AttributeError as e:
+            args.delete_subs = args.delete_subs.decode(sys.getfilesystemencoding())
+        except AttributeError:
             pass
         print('Start delete subtitles in {}'.format(args.delete_subs))
         c = rm_subtitles(args.delete_subs)
@@ -97,9 +90,8 @@ def main():
     if args.move_videos:
         # try to decode str to unicode in python2
         try:
-            args.move_videos = args.move_videos.decode(
-                sys.getfilesystemencoding())
-        except AttributeError as e:
+            args.move_videos = args.move_videos.decode(sys.getfilesystemencoding())
+        except AttributeError:
             print('error')
             pass
         print('Start move videos in {}'.format(args.move_videos))
@@ -111,13 +103,13 @@ def main():
         source, template = args.rename_sub
         try:
             source = source.decode(sys.getfilesystemencoding())
-        except AttributeError as e:
+        except AttributeError:
             print('error')
             pass
         source_list = glob.glob(source)
         try:
             template = template.decode(sys.getfilesystemencoding())
-        except AttributeError as e:
+        except AttributeError:
             print('error')
             pass
         for source in source_list:

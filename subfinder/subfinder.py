@@ -1,21 +1,16 @@
 # -*- coding: utf8 -*-
-from __future__ import unicode_literals
 import os
 from subfinder.subsearcher.subsearcher import get_all_subsearchers
-import re
 import sys
-import glob
 import fnmatch
 import logging
 import mimetypes
 import traceback
 import requests
-from .subsearcher import get_subsearcher, exceptions
 
 
 class Pool(object):
-    """ 模拟线程池，实际上还是同步执行代码
-    """
+    """模拟线程池，实际上还是同步执行代码"""
 
     def __init__(self, size):
         self.size = size
@@ -28,8 +23,7 @@ class Pool(object):
 
 
 class SubFinder(object):
-    """ 字幕查找器
-    """
+    """字幕查找器"""
 
     DEFAULT_VIDEO_EXTS = {'.mkv', '.mp4', '.ts', '.avi', '.wmv'}
 
@@ -77,8 +71,7 @@ class SubFinder(object):
         self.subsearcher = subsearcher_class
 
     def _is_videofile(self, f):
-        """ determine whether `f` is a valid video file, mostly base on file extension
-        """
+        """determine whether `f` is a valid video file, mostly base on file extension"""
         if os.path.isfile(f):
             types = mimetypes.guess_type(f)
             mtype = types[0]
@@ -87,8 +80,7 @@ class SubFinder(object):
         return False
 
     def _has_subtitles(self, f):
-        """ 判断f是否已经有了本地字幕
-        """
+        """判断f是否已经有了本地字幕"""
         dirname = os.path.dirname(f)
         basename = os.path.basename(f)
         basename_no_ext, _ = os.path.splitext(basename)
@@ -107,8 +99,7 @@ class SubFinder(object):
         return False
 
     def _filter_path(self, path):
-        """ 筛选出 path 目录下所有的视频文件
-        """
+        """筛选出 path 目录下所有的视频文件"""
         if self._is_videofile(path):
             if self._fnmatch(os.path.basename(path)):
                 return
@@ -140,12 +131,9 @@ class SubFinder(object):
                 dirs.pop(i)
 
     def _init_session(self):
-        """ 初始化 requests.Session
-        """
+        """初始化 requests.Session"""
         self.session = requests.Session()
-        self.session.mount('http://', adapter=requests.adapters.HTTPAdapter(
-            pool_connections=10,
-            pool_maxsize=100))
+        self.session.mount('http://', adapter=requests.adapters.HTTPAdapter(pool_connections=10, pool_maxsize=100))
 
     def _init_pool(self):
         self.pool = Pool(10)
@@ -161,14 +149,12 @@ class SubFinder(object):
         self.logger.setLevel(log_level)
         sh = logging.StreamHandler(stream=self.logger_output)
         sh.setLevel(log_level)
-        formatter = logging.Formatter(
-            '[%(asctime)s]-[%(levelname)s]: %(message)s', datefmt='%m/%d %H:%M:%S')
+        formatter = logging.Formatter('[%(asctime)s]-[%(levelname)s]: %(message)s', datefmt='%m/%d %H:%M:%S')
         sh.setFormatter(formatter)
         self.logger.addHandler(sh)
 
     def _download(self, videofile):
-        """ 调用 SubSearcher 搜索并下载字幕
-        """
+        """调用 SubSearcher 搜索并下载字幕"""
         basename = os.path.basename(videofile)
 
         subinfos = []
@@ -181,11 +167,11 @@ class SubFinder(object):
                 err = str(e)
                 if self.debug:
                     err = traceback.format_exc()
-                self.logger.error( '{}：搜索字幕发生错误： {}'.format(basename, err))
+                self.logger.error('{}：搜索字幕发生错误： {}'.format(basename, err))
                 continue
             if subinfos:
                 break
-        self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format( len(subinfos), basename))
+        self.logger.info('{1}：找到 {0} 个字幕, 准备下载'.format(len(subinfos), basename))
         for subinfo in subinfos:
             if isinstance(subinfo['subname'], (list, tuple)):
                 self._history[videofile].extend(subinfo['subname'])
@@ -197,23 +183,23 @@ class SubFinder(object):
         self.path = path
 
     def start(self):
-        """ SubFinder 入口，开始函数
-        """
+        """SubFinder 入口，开始函数"""
         self.logger.info('开始')
         videofiles = list(self._filter_path(self.path))
-        l = len(videofiles)
+        l = len(videofiles)  # noqa
         if l > 1 and self.keyword:
-            self.logger.warn('`keyword` should used only when there is one video file, but there is {} video files'.format(l))
+            self.logger.warn(
+                '`keyword` should used only when there is one video file, but there is {} video files'.format(l)
+            )
             return
         for f in videofiles:
             self._history[f] = []
             self.pool.spawn(self._download, f)
         self.pool.join()
-        self.logger.info('='*20 + '下载完成' + '='*20)
+        self.logger.info('=' * 20 + '下载完成' + '=' * 20)
         for v, subs in self._history.items():
             basename = os.path.basename(v)
-            self.logger.info(
-                '{}: 下载 {} 个字幕'.format(basename, len(subs)))
+            self.logger.info('{}: 下载 {} 个字幕'.format(basename, len(subs)))
 
     def done(self):
         pass

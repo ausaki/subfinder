@@ -1,23 +1,21 @@
-from __future__ import unicode_literals
 import os
 import hashlib
 import requests
 from .subsearcher import BaseSubSearcher
 from . import exceptions
 
+
 class ShooterSubSearcher(BaseSubSearcher):
-    """ find subtitles from shooter.org
+    """find subtitles from shooter.org
     API URL: https://www.shooter.cn/api/subapi.php
     """
+
     shortname = 'shooter'
     API_URL = 'https://www.shooter.cn/api/subapi.php'
     SUPPORT_LANGUAGES = ['zh', 'en']
     SUPPORT_EXTS = ['ass', 'srt']
 
-    SHOOTER_LANGUAGES_MAP = {
-        'zh': 'Chn',
-        'en': 'Eng'
-    }
+    SHOOTER_LANGUAGES_MAP = {'zh': 'Chn', 'en': 'Eng'}
 
     def search_subs(self, videofile, languages=None, exts=None, keyword=None):
         if languages is None:
@@ -32,10 +30,7 @@ class ShooterSubSearcher(BaseSubSearcher):
         # self._check_exts(exts)
         filehash = self._compute_video_hash(videofile)
         root, basename = os.path.split(videofile)
-        payload = {'filehash': filehash,
-                   'pathinfo': basename,
-                   'format': 'json',
-                   'lang': ''}
+        payload = {'filehash': filehash, 'pathinfo': basename, 'format': 'json', 'lang': ''}
 
         result = {}
         for language in languages:
@@ -44,15 +39,15 @@ class ShooterSubSearcher(BaseSubSearcher):
             if res.status_code == requests.codes.ok:
                 try:
                     result[language] = res.json()
-                except Exception as e:
+                except Exception:
                     result[language] = []
 
         subinfos = []
         for language, subinfolist in result.items():
             ext_set = set()
             for subinfo in subinfolist:
-                desc = subinfo['Desc']
-                delay = subinfo['Delay']
+                desc = subinfo['Desc']  # noqa
+                delay = subinfo['Delay']  # noqa
                 files = subinfo['Files']
                 for item in files:
                     ext_ = item['Ext']
@@ -69,12 +64,14 @@ class ShooterSubSearcher(BaseSubSearcher):
                         subname = self._gen_subname(videofile, language, ext_, prio)
                         ext_set.add(ext_)
                         subpath = os.path.join(os.path.dirname(videofile), subname)
-                        subinfos.append({
-                            'link': link,
-                            'language': language,
-                            'subname': subpath,
-                            'ext': ext_,
-                        })
+                        subinfos.append(
+                            {
+                                'link': link,
+                                'language': language,
+                                'subname': subpath,
+                                'ext': ext_,
+                            }
+                        )
                         res = self.session.get(link, stream=True)
                         with open(subpath, 'wb') as fp:
                             for chunk in res.iter_content(8192):
@@ -83,20 +80,15 @@ class ShooterSubSearcher(BaseSubSearcher):
 
     @classmethod
     def _gen_subname(cls, videofile, language, ext, prio=''):
-        """ generate filename of subtitles
-        """
+        """generate filename of subtitles"""
         root, basename = os.path.split(videofile)
         name, _ = os.path.splitext(basename)
-        subname = '{basename}{prio}.{language}.{ext}'.format(
-            basename=name,
-            language=language,
-            ext=ext,
-            prio=prio)
+        subname = '{basename}{prio}.{language}.{ext}'.format(basename=name, language=language, ext=ext, prio=prio)
         return subname
 
     @staticmethod
     def _compute_video_hash(videofile):
-        """ compute videofile's hash
+        """compute videofile's hash
         reference: https://docs.google.com/document/d/1w5MCBO61rKQ6hI5m9laJLWse__yTYdRugpVyz4RzrmM/preview
         """
         seek_positions = [None] * 4
@@ -104,8 +96,7 @@ class ShooterSubSearcher(BaseSubSearcher):
         with open(videofile, 'rb') as fp:
             total_size = os.fstat(fp.fileno()).st_size
             if total_size < 8192 + 4096:
-                raise exceptions.InvalidFileError(
-                    'the video[{}] is too small'.format(os.path.basename(videofile)))
+                raise exceptions.InvalidFileError('the video[{}] is too small'.format(os.path.basename(videofile)))
 
             seek_positions[0] = 4096
             seek_positions[1] = total_size // 3 * 2

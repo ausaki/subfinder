@@ -29,10 +29,10 @@ pytest = "*"
 subfinder = "subfinder.run_gevent:run"
 subutils = "subfinder.utils:main"
 
-
 [build-system]
 requires = ["poetry>=0.12"]
 build-backend = "poetry.masonry.api"
 
-[tool.autopep8]
-max_line_length = 120
+[tool.black]
+skip-string-normalization = true
+line_length = 120

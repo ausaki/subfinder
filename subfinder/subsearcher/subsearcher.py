@@ -1,14 +1,9 @@
 # -*- coding: utf8 -*-
-from __future__ import unicode_literals
 from abc import abstractmethod, ABCMeta
 import os
-from os.path import join
 import re
 import cgi
-try:
-    import urlparse
-except ImportError as e:
-    from urllib import parse as urlparse
+from urllib import parse as urlparse
 import requests
 from subfinder.tools.compressed_file import CompressedFile
 from . import exceptions
@@ -18,12 +13,11 @@ registered_subsearchers = {}
 
 
 def register_subsearcher(name, subsearcher_cls):
-    """ register a subsearcher, the `name` is a key used for searching subsearchers.
+    """register a subsearcher, the `name` is a key used for searching subsearchers.
     if the subsearcher named `name` already exists, then it's will overrite the old subsearcher.
     """
     if not issubclass(subsearcher_cls, BaseSubSearcher):
-        raise ValueError(
-            '{} is not a subclass of BaseSubSearcher'.format(subsearcher_cls))
+        raise ValueError('{} is not a subclass of BaseSubSearcher'.format(subsearcher_cls))
     registered_subsearchers[name] = subsearcher_cls
 
 
@@ -35,6 +29,7 @@ def register(subsearcher_cls=None, name=None):
             _name = name
         register_subsearcher(_name, subsearcher_cls)
         return subsearcher_cls
+
     return decorator(subsearcher_cls) if subsearcher_cls is not None else decorator
 
 
@@ -47,15 +42,17 @@ def get_all_subsearchers():
 
 
 class BaseSubSearcher(object):
-    """ The abstract class for search subtitles.
+    """The abstract class for search subtitles.
 
     You must implement following methods:
     - search_subs
     """
+
     __metaclass__ = ABCMeta
     LANGUAGES_MAP = {
         '简体': 'zh_chs',
         '繁體': 'zh_cht',
+        '繁体': 'zh_cht',
         'English': 'en',
         'english': 'en',
         '英文': 'en',
@@ -69,18 +66,20 @@ class BaseSubSearcher(object):
     shortname = 'base_subsearcher'
     API_URL = ''
 
-    def __init__(self, subfinder,  api_urls=None):
+    def __init__(self, subfinder, api_urls=None):
         """
         subfinder: SubFinder
         api_urls: api_urls
         """
         self.session = requests.session()
-        self.session.headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'
+        self.session.headers[
+            'User-Agent'
+        ] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'  # noqa
         self.subfinder = subfinder
         self.api_urls = api_urls if api_urls else {}
         self.API_URL = self.api_urls.get(self.shortname, self.__class__.API_URL)
 
-        language_priority =  self.subfinder.languages
+        language_priority = self.subfinder.languages
         if language_priority:
             self.language_priority = dict(zip(language_priority, range(1, len(language_priority) + 1)))
         else:
@@ -90,7 +89,7 @@ class BaseSubSearcher(object):
             self.ext_priority = dict(zip(ext_priority, range(1, len(ext_priority) + 1)))
         else:
             self.ext_priority = self.EXT_PRIORITY
-        
+
     def _debug(self, msg):
         self.subfinder.logger.debug(msg)
 
@@ -98,26 +97,22 @@ class BaseSubSearcher(object):
     def _check_languages(cls, languages):
         for lang in languages:
             if lang not in cls.SUPPORT_LANGUAGES:
-                raise exceptions.LanguageError(
-                    '{} doesn\'t support "{}" language'.format(cls.__name__, lang))
+                raise exceptions.LanguageError('{} doesn\'t support "{}" language'.format(cls.__name__, lang))
 
     @classmethod
     def _check_exts(cls, exts):
         for ext in exts:
             if ext not in cls.SUPPORT_EXTS:
-                raise exceptions.ExtError(
-                    '{} doesn\'t support "{}" ext'.format(cls.__name__, ext))
+                raise exceptions.ExtError('{} doesn\'t support "{}" ext'.format(cls.__name__, ext))
 
     @classmethod
     def _join_url(cls, url, path):
-        """ join absolute `url` and `path`(href)
-        """
+        """join absolute `url` and `path`(href)"""
         return urlparse.urljoin(url, path)
-    
+
     @classmethod
     def _get_videoname(cls, videofile):
-        """parse the `videofile` and return it's basename
-        """
+        """parse the `videofile` and return it's basename"""
         name = os.path.basename(videofile)
         name = os.path.splitext(name)[0]
         return name
@@ -128,16 +123,16 @@ class BaseSubSearcher(object):
         f = os.path.basename(subtitle_file)
         for lang_name, lang_code in self.LANGUAGES_MAP.items():
             # it's not possile that a filename starts with a language mark.
-            # so we use '>' rather than '>='.   
+            # so we use '>' rather than '>='.
             if f.rfind(lang_name) > 0 or f.rfind(lang_code) > 0:
                 langs.add(lang_code)
                 lang_prio = min(lang_prio, self.language_priority.get(lang_code, max_lang_prio))
-        
+
         # it's possible that subtitle filename contains both 'en' and 'zh'('zh_chs' or 'zh_cht').
         # in this case, we should treat it as 'zh_en'.
         if 'en' in langs and ('zh' in langs or 'zh_chs' in langs or 'zh_cht' in langs):
             lang_prio = self.language_priority.get('zh_en', max_lang_prio)
-        
+
         _, ext = os.path.splitext(f)
         ext = ext[1:]
         ext_prio = self.ext_priority.get(ext, max(self.ext_priority.values()))
@@ -149,10 +144,10 @@ class BaseSubSearcher(object):
         if not language:
             language_ = []
             try:
-                for l in cls.LANGUAGES_MAP:
+                for l in cls.LANGUAGES_MAP:  # noqa
                     # it's not possile that a filename starts with a language mark.
                     # so we use '>' rather than '>='.
-                    if origin_file.find(l) > 0: 
+                    if origin_file.find(l) > 0:
                         language_.append(l)
             except Exception:
                 pass
@@ -171,7 +166,7 @@ class BaseSubSearcher(object):
 
     @classmethod
     def _parse_videoname(cls, videoname):
-        """ parse videoname and return video info dict
+        """parse videoname and return video info dict
         video info contains:
         - title, the name of video
         - sub_title, the sub_title of video
@@ -185,7 +180,7 @@ class BaseSubSearcher(object):
             'resolution': cls.RE_RESOLUTION,
             'source': cls.RE_SOURCE,
             'audio_encoding': cls.RE_AUDIO_ENC,
-            'video_encoding': cls.RE_VIDEO_ENC
+            'video_encoding': cls.RE_VIDEO_ENC,
         }
         index = len(videoname)
         m = cls.RE_SEASON_EPISODE.search(videoname)
@@ -218,7 +213,7 @@ class BaseSubSearcher(object):
 
     @abstractmethod
     def search_subs(self, videofile, languages=None, exts=None, keyword=None):
-        """ search subtitles of videofile.
+        """search subtitles of videofile.
 
         `videofile` is the absolute(or relative) path of the video file.
 
@@ -272,20 +267,16 @@ class HTMLSubSearcher(BaseSubSearcher):
 
     shortname = 'html_subsearcher'
 
-    RE_SEASON = re.compile(
-        r'[Ss](?P<season>\d+)\.?')
-    RE_SEASON_EPISODE = re.compile(
-        r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
+    RE_SEASON = re.compile(r'[Ss](?P<season>\d+)\.?')
+    RE_SEASON_EPISODE = re.compile(r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
     RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|2160[Pp]|HR)')
-    RE_SOURCE = re.compile(
-        r'\.(?P<source>BD|Blu[Rr]ay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
-    RE_AUDIO_ENC = re.compile(
-        r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
+    RE_SOURCE = re.compile(r'\.(?P<source>BD|Blu[Rr]ay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
+    RE_AUDIO_ENC = re.compile(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
     RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
 
-    def __init__(self, subfinder, api_urls):
+    def __init__(self, subfinder, api_urls=None):
         super().__init__(subfinder, api_urls=api_urls)
-        
+
         # the following attrs will be init at `self._prepare_search_subs` method.
         self.languages = ''
         self.exts = ''
@@ -295,10 +286,8 @@ class HTMLSubSearcher(BaseSubSearcher):
         self.keywords = []
         self.referer = ''
 
-
     def _extract(self, compressed_file):
-        """ 解压字幕文件，如果无法解压，则直接返回 compressed_file。
-        """
+        """解压字幕文件，如果无法解压，则直接返回 compressed_file。"""
         if not CompressedFile.is_compressed_file(compressed_file):
             return [compressed_file]
 
@@ -326,7 +315,7 @@ class HTMLSubSearcher(BaseSubSearcher):
         return subs
 
     def _download_subtitle(self, download_link, subtitle):
-        """ 下载字幕
+        """下载字幕
         videofile: 视频文件路径
         sub_title: 字幕标题（文件名）
         download_link: 下载链接
@@ -366,8 +355,7 @@ class HTMLSubSearcher(BaseSubSearcher):
 
     @classmethod
     def _gen_keyword(cls, videoinfo):
-        """ 获取关键词
-        """
+        """获取关键词"""
         separators = ['.', ' ']
         keywords = []
         for sep in separators:
@@ -383,7 +371,7 @@ class HTMLSubSearcher(BaseSubSearcher):
         return keywords
 
     def _filter_subinfo_list(self, subinfo_list):
-        """ filter subinfo list base on:
+        """filter subinfo list base on:
         - season
         - episode
         - languages
@@ -391,14 +379,7 @@ class HTMLSubSearcher(BaseSubSearcher):
         -
         return a best matched subinfo
         """
-        filter_field_list = [
-            'season',
-            'episode',
-            'resolution',
-            'source',
-            'video_encoding',
-            'audio_encoding'
-        ]
+        filter_field_list = ['season', 'episode', 'resolution', 'source', 'video_encoding', 'audio_encoding']
         videoinfo = self.videoinfo
         filtered_subinfo_list = dict((f, []) for f in filter_field_list)
         languages = set(self.languages)
@@ -429,14 +410,14 @@ class HTMLSubSearcher(BaseSubSearcher):
         for field in reversed(filter_field_list):
             if len(filtered_subinfo_list[field]) > 0:
                 # sort by download_count and rate
-                sorted_subinfo_list = sorted(filtered_subinfo_list[field],
-                                             key=lambda item: (item['rate'], item['download_count']), reverse=True)
+                sorted_subinfo_list = sorted(
+                    filtered_subinfo_list[field], key=lambda item: (item['rate'], item['download_count']), reverse=True
+                )
                 return sorted_subinfo_list[0]
 
     @abstractmethod
     def _get_subinfo_list(self, keyword):
-        """ return subinfo_list of videoname
-        """
+        """return subinfo_list of videoname"""
         # searching subtitles
         pass
 
@@ -446,8 +427,7 @@ class HTMLSubSearcher(BaseSubSearcher):
 
     @abstractmethod
     def _visit_downloadpage(self, downloadpage_link):
-        """ get the real download link of subtitles.
-        """
+        """get the real download link of subtitles."""
         pass
 
     def _prepare_search_subs(self, videofile, languages=None, exts=None, keyword=None):
@@ -471,7 +451,7 @@ class HTMLSubSearcher(BaseSubSearcher):
         else:
             keywords = [keyword]
         self.keywords = keywords
-    
+
     def search_subs(self, videofile, languages=None, exts=None, keyword=None):
         self._prepare_search_subs(videofile, languages, exts, keyword)
         self._debug('keywords: {}'.format(self.keywords))
@@ -480,13 +460,19 @@ class HTMLSubSearcher(BaseSubSearcher):
         if not subinfo:
             return []
         subs = self._download_subs(subinfo)
-        return [{
-            'link': self.referer,
-            'language': subinfo['languages'],
-            'ext': subinfo['exts'],
-            'subname': subs,
-            'downloaded': True
-        }] if subs else []
+        return (
+            [
+                {
+                    'link': self.referer,
+                    'language': subinfo['languages'],
+                    'ext': subinfo['exts'],
+                    'subname': subs,
+                    'downloaded': True,
+                }
+            ]
+            if subs
+            else []
+        )
 
     def _get_subinfo(self):
         subinfo = None

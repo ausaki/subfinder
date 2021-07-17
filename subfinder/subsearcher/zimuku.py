@@ -1,5 +1,4 @@
 # -*- coding: utf8 -*-
-from __future__ import unicode_literals, print_function
 import re
 import bs4
 import time
@@ -7,19 +6,19 @@ from .subsearcher import HTMLSubSearcher, SubInfo
 
 
 class ZimukuSubSearcher(HTMLSubSearcher):
-    """ zimuku 字幕搜索器(https://www.zimuku.cn/)
-    """
+    """zimuku 字幕搜索器(https://www.zimuku.cn/)"""
+
     SUPPORT_LANGUAGES = ['zh_chs', 'zh_cht', 'en', 'zh_en']
     SUPPORT_EXTS = ['ass', 'srt']
 
-    API_URL = 'http://www.zimuku.la/search/'
+    API_URL = 'http://zimuku.org/search/'
 
     MAX_RETRY_COUNT = 5
 
     shortname = 'zimuku'
 
     def _parse_downloadcount(self, text):
-        """ parse download count
+        """parse download count
         text format maybe:
         - pure number: 1000
         - number + unit: 1万
@@ -40,7 +39,7 @@ class ZimukuSubSearcher(HTMLSubSearcher):
             return 0
 
     def _parse_search_results_html(self, doc):
-        """ parse search result html, return subgroups
+        """parse search result html, return subgroups
         subgroups: [{ 'title': title, 'link': link}]
         """
         subgroups = []
@@ -108,13 +107,12 @@ class ZimukuSubSearcher(HTMLSubSearcher):
             ele_td = tr.select('td.tac')
             if ele_td:
                 ele_td = ele_td[-1]
-                subinfo['download_count'] = self._parse_downloadcount( ele_td.get_text().strip())
+                subinfo['download_count'] = self._parse_downloadcount(ele_td.get_text().strip())
             subinfo_list.append(subinfo)
         return subinfo_list
 
     def _filter_subgroup(self, subgroups):
-        """ choose a best subgroup from `subgroups`
-        """
+        """choose a best subgroup from `subgroups`"""
         if not subgroups:
             return None
         videoinfo = self.videoinfo
@@ -122,7 +120,7 @@ class ZimukuSubSearcher(HTMLSubSearcher):
         if season == 0:
             return subgroups[0]['link']
         for sg in subgroups:
-            title = sg['title']
+            title = sg['title']  # noqa
             sublist = sg['sublist']
             for sub in sublist:
                 videoinfo_ = self._parse_videoname(sub)
@@ -138,8 +136,7 @@ class ZimukuSubSearcher(HTMLSubSearcher):
         return path
 
     def _get_subinfo_list(self, keyword):
-        """ return subinfo_list of videoname
-        """
+        """return subinfo_list of videoname"""
         # searching subtitles
         res = self.session.get(self.API_URL, params={'q': keyword}, headers={'Referer': self.referer})
         doc = res.text
@@ -185,8 +182,7 @@ class ZimukuSubSearcher(HTMLSubSearcher):
         return downloadpage_link
 
     def _visit_downloadpage(self, downloadpage_link):
-        """ get the real download link of subtitles.
-        """
+        """get the real download link of subtitles."""
         res = self.session.get(downloadpage_link, headers={'Referer': self.referer})
         doc = res.content
         self.referer = res.url

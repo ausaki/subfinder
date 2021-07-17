@@ -1,13 +1,15 @@
 # -*- coding: utf-8 -*-
 """ 解压压缩包，支持zip, rar
 """
+
 import os
 import sys
 import six
 
-class CompressedFile(object):
-    """ a simple wrapper class for ZipFile and RarFile, it's only support read.
-    """
+
+class CompressedFile:
+    """a simple wrapper class for ZipFile and RarFile, it's only support read."""
+
     EXTS = ['zip', 'rar']
 
     def __init__(self, file):
@@ -16,9 +18,11 @@ class CompressedFile(object):
         _, ext = os.path.splitext(file)
         if ext == '.zip':
             import zipfile
+
             self._file = zipfile.ZipFile(self.file, 'r')
         elif ext == '.rar':
             import rarfile
+
             if sys.platform == 'win32':
                 # if os system is windows，try to use built-in unrar
                 rarfile.UNRAR_TOOL = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'unrar.exe')
@@ -31,15 +35,15 @@ class CompressedFile(object):
         if six.PY3:
             try:
                 name = name.encode('cp437')
-            except UnicodeEncodeError as e:
+            except UnicodeEncodeError:
                 pass
         if isinstance(name, six.binary_type):
             try:
                 name = name.decode('gbk')
-            except UnicodeDecodeError as e:
+            except UnicodeDecodeError:
                 try:
                     name = name.decode('utf8')
-                except UnicodeDecodeError as e:
+                except UnicodeDecodeError:
                     pass
         return name
 
@@ -53,7 +57,7 @@ class CompressedFile(object):
         info = self._file.getinfo(name)
         try:
             return info.isdir()
-        except:
+        except Exception:
             return name.endswith(os.path.sep)
 
     def namelist(self):

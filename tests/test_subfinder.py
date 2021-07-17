@@ -1,6 +1,5 @@
 #! /usr/bin/env python
 
-from __future__ import unicode_literals, print_function
 import os
 import pytest
 import pathlib
@@ -35,11 +34,9 @@ def videofile(tmp_path_factory) -> pathlib.Path:
 def conf_file(tmp_path_factory: pathlib.Path) -> pathlib.Path:
     conf = '''
     {
-        "method": ["zimuku", "zimuzu", "subhd"],
+        "method": ["zimuku", "subhd"],
         "api_urls": {
-            "zimuku": "http://www.zimuku.la/search/",
-            "zimuzu": "http://www.rrys2020.com/search/index/",
-            "zimuzu_api_subtitle_download": "/api/v1/static/subtitle/detail",
+            "zimuku": "http://zimuku.org/search/",
             "subhd": "https://subhd.tv/search/",
             "subhd_api_subtitle_download": "/ajax/down_ajax/",
             "subhd_api_subtitle_preview": "/ajax/file_ajax/"
@@ -55,17 +52,6 @@ def test_search_subs_by_zimuku(videofile: pathlib.Path):
     parent = videofile.parent
     rm_subtitles(parent)
     sc = get_subsearcher('zimuku')
-    subfinder = SubFinder(path=videofile, subsearcher_class=sc, debug=True)
-    subfinder.start()
-    exts = sc.SUPPORT_EXTS
-    files = [f for f in parent.iterdir() if f.suffix[1:] in exts]
-    assert len(files) >= 0
-
-
-def test_search_subs_by_zimuzu(videofile: pathlib.Path):
-    parent = videofile.parent
-    rm_subtitles(parent)
-    sc = get_subsearcher('zimuzu')
     subfinder = SubFinder(path=videofile, subsearcher_class=sc, debug=True)
     subfinder.start()
     exts = sc.SUPPORT_EXTS
@@ -100,9 +86,10 @@ def check_cmd_output(cmd):
 def test_run_from_cmd(videofile: pathlib.Path):
     parent = videofile.parent
     rm_subtitles(parent)
-    cmd = 'subfinder {} -m zimuku zimuzu subhd'.format(videofile)
+    cmd = 'subfinder {} -m zimuku subhd'.format(videofile)
     n = check_cmd_output(cmd)
     assert n > 0
+
 
 def test_cmd_option_exclude(videofile: pathlib.Path):
     parent = videofile.parent
