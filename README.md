@@ -30,6 +30,7 @@ Table of Contents
   - [参考](#参考)
   - [License](#license)
   - [更新历史](#更新历史)
+    - [v2.2.0](#v220) 
     - [v2.1.0](#v210)
     - [v2.0.1](#v201)
     - [v2.0.0](#v200)
@@ -54,7 +55,7 @@ Table of Contents
 
 - 支持提供的 API，可以精确匹配字幕。
 
-- 支持 [射手字幕网](https://www.shooter.cn/), [字幕库](https://www.zimuku.cn/), [字幕组](http://www.zimuzu.io/), [SubHD](https://subhd.tv)。
+- 支持 [射手字幕网](https://www.shooter.cn/), [字幕库](https://www.zimuku.cn/), [SubHD](https://subhd.tv)。
 
 ## 安装
 
@@ -104,21 +105,21 @@ Table of Contents
 
 常用参数说明（详细的参数信息请查看 `subfinder -h`）：
 
-| 参数              | 含义                                                                                               | 必需                                               |
-| ----------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| `-l, --languages` | 指定字幕语言，可同时指定多个。每个字幕查找器支持的语言不相同。具体支持的语言请看下文。             | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
-| `-e, --exts`      | 指定字幕文件格式，可同时指定多个。每个字幕查找器支持的文件格式不相同。具体支持的文件格式请看下文。 | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
-| `-m,--method`     | 指定字幕查找器，可同时指定多个。                                                                   | 否，subfinder 默认使用 shooter 查找字幕。          |
-| `-k, --keyword`   | 手动搜索关键字. 当 SubFinder 使用本身的关键字无法搜索到字幕时, 可以通过这个参数手动指定关键字.     | 否                                                 |
-| `--video_exts`    | 视频文件的后缀名（包括.，例如. mp4）                                                               | 否                                                 |
-| `--ignore`        | 忽略本地已有的字幕强行查找字幕. 注意: 这可能会覆盖本地已有的字幕. 默认 False。                     | 否                                                 |
-| `--exclude`       | 排除文件或目录，支持类似于 shell 的文件匹配模式。详情见下文                                        | 否                                                 |
-| `--api_urls`      | 指定字幕搜索器的 API URL。详情见下文                                                               | 否                                                 |
-| `--no-order-marker`      | SubFinder 默认会向字幕文件名中添加数字编号, 方便对字幕进行排序. 如果指定该选项, 则 SubFinder 不添加数字编号 | 否                                                 |
-| `-c, --conf`      | 配置文件                                                                                           | 否，SubFinder 默认从~/.subfinder.json 读取。       |
-| `-s,--silence`    | 静默运行，不输出日志                                                                               | 否                                                 |
-| `--debug`         | 调试模式，输出调试日志                                                                             | 否                                                 |
-| `-h,--help`       | 显示帮助信息                                                                                       | 否                                                 |
+| 参数                | 含义                                                                                                        | 必需                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `-l, --languages`   | 指定字幕语言，可同时指定多个。每个字幕查找器支持的语言不相同。具体支持的语言请看下文。                      | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
+| `-e, --exts`        | 指定字幕文件格式，可同时指定多个。每个字幕查找器支持的文件格式不相同。具体支持的文件格式请看下文。          | 否，subfinder 默认会下载字幕查找器找到的所有字幕。 |
+| `-m,--method`       | 指定字幕查找器，可同时指定多个。                                                                            | 否，subfinder 默认使用 shooter 查找字幕。          |
+| `-k, --keyword`     | 手动搜索关键字. 当 SubFinder 使用本身的关键字无法搜索到字幕时, 可以通过这个参数手动指定关键字.              | 否                                                 |
+| `--video_exts`      | 视频文件的后缀名（包括.，例如. mp4）                                                                        | 否                                                 |
+| `--ignore`          | 忽略本地已有的字幕强行查找字幕. 注意: 这可能会覆盖本地已有的字幕. 默认 False。                              | 否                                                 |
+| `--exclude`         | 排除文件或目录，支持类似于 shell 的文件匹配模式。详情见下文                                                 | 否                                                 |
+| `--api_urls`        | 指定字幕搜索器的 API URL。详情见下文                                                                        | 否                                                 |
+| `--no-order-marker` | SubFinder 默认会向字幕文件名中添加数字编号, 方便对字幕进行排序. 如果指定该选项, 则 SubFinder 不添加数字编号 | 否                                                 |
+| `-c, --conf`        | 配置文件                                                                                                    | 否，SubFinder 默认从~/.subfinder.json 读取。       |
+| `-s,--silence`      | 静默运行，不输出日志                                                                                        | 否                                                 |
+| `--debug`           | 调试模式，输出调试日志                                                                                      | 否                                                 |
+| `-h,--help`         | 显示帮助信息                                                                                                | 否                                                 |
 
 - `--exclude`, 支持的匹配模式类似于 shell，`*` 匹配任意长度的字符串，`?` 匹配一个字符，`[CHARS]` 匹配 CHARS 中的任一字符。例如：
 
@@ -136,8 +137,6 @@ Table of Contents
 
   - 字幕库的 API 一般形如 http://www.zimuku.la/search， 这个 URL 就是网页端 “搜索” 功能的 URL。
 
-  - 字幕组的 API 一般形如 http://www.zmz2019.com/search， 这个 URL 同样是网页端 “搜索” 功能的 URL。
-
   - SubHD 的 API 一般形如 https://subhd.tv/search. 
 
   - 射手网的 API 比较稳定，一般不会变动。
@@ -150,10 +149,6 @@ Table of Contents
   {
     // 设置字幕库的搜索 API
     "zimuku": "http://www.zimuku.la/search",
-    // 设置字幕组的搜索 API
-    "zimuzu": "http://www.zmz2019.com/search",
-    // 设置字幕组获取字幕下载链接的 API, 注意不包含域名
-    "zimuzu_api_subtitle_download": "/api/v1/static/subtitle/detail",
     // 设置 SubHD 的搜索 API
     "subhd": "https://subhd.tv/search",
     // 设置 SubHD 获取字幕下载链接的 API, 注意不包含域名
@@ -169,7 +164,6 @@ Table of Contents
 | ---------- | ----------------------------------- | -------------- |
 | shooter    | ['zh', 'en']                        | ['ass', 'srt'] |
 | zimuku     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
-| zimuzu     | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 | subhd      | ['zh_chs', 'zh_cht', 'en', 'zh_en'] | ['ass', 'srt'] |
 
 语言代码：
@@ -213,16 +207,12 @@ EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
 {
   "languages": ["zh", "en", "zh_chs"],
   "exts": ["ass", "srt"],
-  "method": ["shooter", "zimuzu", "zimuku"],
+  "method": ["shooter", "zimuku"],
   "video_exts": [".mp4", ".mkv", ".iso"],
   "exclude": ["excluded_path/", "*abc.mp4"],
   "api_urls": {
     // 设置字幕库的搜索 API
     "zimuku": "http://www.zimuku.la/search",
-    // 设置字幕组的搜索 API
-    "zimuzu": "http://www.zmz2019.com/search",
-    // 设置字幕组获取字幕下载链接的 API, 注意不包含域名
-    "zimuzu_api_subtitle_download": "/api/v1/static/subtitle/detail",
     // 设置 SubHD 的搜索 API
     "subhd": "https://subhd.tv/search",
     // 设置 SubHD 获取字幕下载链接的 API, 注意不包含域名
@@ -315,6 +305,11 @@ EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
 [MIT License](LICENSE)
 
 ## 更新历史
+
+
+### v2.1.0
+
+- 移除 zimuzu.
 
 ### v2.1.0
 
