@@ -146,7 +146,7 @@ class SubHDSubSearcher(HTMLSubSearcher):
                 continue
             filedata = data['filedata']
             origin_file = os.path.basename(fname)
-            subname = self._gen_subname(origin_file)
+            subname = self._gen_subname(origin_file, self.videofile)
             subname = os.path.join(root, subname)
             with open(subname, 'w') as fp:
                 fp.write(filedata)

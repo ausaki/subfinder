@@ -162,6 +162,9 @@ class BaseSubSearcher(object):
         if not ext.startswith('.'):
             ext = '.' + ext
 
+        if prio and not prio.startswith('.'):
+            prio = '.' + prio
+
         return '{basename}{prio}{language}{ext}'.format(basename=basename, language=language, ext=ext, prio=prio)
 
     @classmethod
@@ -306,7 +309,7 @@ class HTMLSubSearcher(BaseSubSearcher):
             prio = ''
             if not self.subfinder.no_order_marker:
                 prio = self._calc_subtitle_file_prio(origin_file)
-                prio = '.{:05d}'.format(prio)
+                prio = '{:05d}'.format(prio)
             subname = self._gen_subname(origin_file, self.videofile, prio=prio)
             subpath = os.path.join(root, subname)
             cf.extract(name, subpath)
