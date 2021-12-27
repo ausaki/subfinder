@@ -228,7 +228,7 @@ EXT_PRIORITY = {"ass": 1, "ssa": 2, "srt": 3}
 
 使用命令行下载字幕还是有一点不方便，特别是需要输入路径。
 
-在 widnows 中，可以通过注册表将 subfinder 添加到右键菜单，使用时右键选中视频文件或者文件夹，然后点击右键菜单中的 “查找字幕”。
+在 Windows 中，可以通过注册表将 subfinder 添加到右键菜单，使用时右键选中视频文件或者文件夹，然后点击右键菜单中的 “查找字幕”。
 
 ![win_menu](assets/subfinder_menu.win.gif)
 
