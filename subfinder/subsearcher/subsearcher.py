@@ -66,15 +66,19 @@ class BaseSubSearcher(object):
     shortname = 'base_subsearcher'
     API_URL = ''
 
-    def __init__(self, subfinder, api_urls=None):
+    def __init__(self, subfinder, api_urls=None, cookies=None):
         """
         subfinder: SubFinder
-        api_urls: api_urls
+        api_urls: a dict contains api urls
+        cookies: a list contains cookies
         """
         self.session = requests.session()
         self.session.headers[
             'User-Agent'
         ] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'  # noqa
+        if cookies:
+            for cookie in cookies:
+                self.session.cookies.set(**cookie)
         self.subfinder = subfinder
         self.api_urls = api_urls if api_urls else {}
         self.API_URL = self.api_urls.get(self.shortname, self.__class__.API_URL)
@@ -277,8 +281,8 @@ class HTMLSubSearcher(BaseSubSearcher):
     RE_AUDIO_ENC = re.compile(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
     RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
 
-    def __init__(self, subfinder, api_urls=None):
-        super().__init__(subfinder, api_urls=api_urls)
+    def __init__(self, subfinder, api_urls=None, cookies=None):
+        super().__init__(subfinder, api_urls=api_urls, cookies=cookies)
 
         # the following attrs will be init at `self._prepare_search_subs` method.
         self.languages = ''
@@ -359,19 +363,30 @@ class HTMLSubSearcher(BaseSubSearcher):
     @classmethod
     def _gen_keyword(cls, videoinfo):
         """获取关键词"""
+        title = videoinfo.get('title')
+        season = ''
+        episode = ''
+        if videoinfo['season'] != 0:
+            season = 'S{:02d}'.format(videoinfo['season'])
+        if videoinfo['episode'] != 0:
+            episode = 'E{:02d}'.format(videoinfo['episode'])
         separators = ['.', ' ']
         keywords = []
-        for sep in separators:
-            keyword = [videoinfo.get('title')]
-            if videoinfo['season'] != 0:
-                keyword.append('S{:02d}'.format(videoinfo['season']))
-            if videoinfo['episode'] != 0:
-                keyword.append('E{:02d}'.format(videoinfo['episode']))
-            # replace space with ''
-            keyword_str = sep.join(keyword)
-            keyword_str = re.sub(r'\s+', ' ', keyword_str)
-            keywords.append(keyword_str)
-        return keywords
+        keywords.append((title, ))
+        if season:
+            keywords.append((title, season))
+        if episode:
+            keywords.append((title, season, episode))
+            keywords.append((title, season + episode))
+
+        result = set()
+        for keyword in keywords:
+            for sep in separators:
+                keyword_str = sep.join(keyword)
+                keyword_str = re.sub(r'\s+', ' ', keyword_str)
+                result.add(keyword_str)
+
+        return list(result)
 
     def _filter_subinfo_list(self, subinfo_list):
         """filter subinfo list base on:

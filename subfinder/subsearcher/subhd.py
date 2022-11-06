@@ -18,8 +18,8 @@ class SubHDSubSearcher(HTMLSubSearcher):
     _cache = {}
     shortname = 'subhd'
 
-    def __init__(self, subfinder, api_urls=None):
-        super(SubHDSubSearcher, self).__init__(subfinder, api_urls=api_urls)
+    def __init__(self, subfinder, api_urls=None, **kwargs):
+        super(SubHDSubSearcher, self).__init__(subfinder, api_urls=api_urls, **kwargs)
         self.API_SUBTITLE_DOWNLOAD = self.api_urls.get(
             'subhd_api_subtitle_download', self.__class__.API_SUBTITLE_DOWNLOAD
         )

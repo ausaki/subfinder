@@ -54,6 +54,8 @@ class SubFinder(object):
         self.api_urls = kwargs.get('api_urls', {})
         # no-order-marker
         self.no_order_marker = kwargs.get('no_order_marker', False)
+        # cookies
+        self.cookies = kwargs.get('cookies', [])
 
         self.kwargs = kwargs
 
@@ -159,7 +161,7 @@ class SubFinder(object):
 
         subinfos = []
         for subsearcher_cls in self.subsearcher:
-            subsearcher = subsearcher_cls(self, api_urls=self.api_urls)
+            subsearcher = subsearcher_cls(self, api_urls=self.api_urls, cookies=self.cookies)
             self.logger.info('{0}：开始使用 {1} 搜索字幕'.format(basename, subsearcher))
             try:
                 subinfos = subsearcher.search_subs(videofile, self.languages, self.exts, self.keyword)

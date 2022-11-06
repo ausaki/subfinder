@@ -64,6 +64,12 @@ def run(subfinder_class):
         action='store_true',
         help="if this option is enabled, SubFinder will not add 'order marker' into subtitle filename",
     )
+    parser.add_argument(
+        '--cookies',
+        nargs='*',
+        default=None,
+        help='specify the cookies for the subsearcher, e.g: --cookie "domain=example.com;foo=bar" "domain=example2.com;foo=bar"',
+    )
     parser.add_argument('-s', '--silence', action='store_true', help="don't print anything, default to False")
     parser.add_argument(
         '-p',
@@ -110,6 +116,21 @@ def run(subfinder_class):
             continue
         # otherwise overwrite value in config file
         conf_dict[opt] = val
+
+    # process cookies
+    if cookies := conf_dict.pop('cookies', None):
+        result = []
+        for cookie_str in cookies:
+            cookie = {}
+            for pair in cookie_str.split(';'):
+                key, value = pair.split('=')
+                if key.lower() not in ['domain', 'path', 'expires', 'max-age', 'secure', 'httponly']:
+                    cookie['name'] = key
+                    cookie['value'] = value
+                else:
+                    cookie[key.lower()] = value
+            result.append(cookie)
+        conf_dict['cookies'] = result
 
     root = conf_dict.pop('path')
     subfinder = subfinder_class(
