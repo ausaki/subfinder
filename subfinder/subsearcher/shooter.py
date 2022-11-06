@@ -83,7 +83,7 @@ class ShooterSubSearcher(BaseSubSearcher):
         """generate filename of subtitles"""
         root, basename = os.path.split(videofile)
         name, _ = os.path.splitext(basename)
-        subname = '{basename}{prio}.{language}.{ext}'.format(basename=name, language=language, ext=ext, prio=prio)
+        subname = '{basename}.{prio}.{language}.{ext}'.format(basename=name, prio=prio, language=language, ext=ext)
         return subname
 
     @staticmethod
