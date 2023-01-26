@@ -102,7 +102,7 @@ class ZimukuSubSearcher(HTMLSubSearcher):
                 ele_i = ele_i[0]
                 m = re.search(r'(\d+)', ele_i.get('title'))
                 if m:
-                    subinfo['rate'] = m.group(1)
+                    subinfo['rate'] = int(m.group(1))
             # 下载次数
             ele_td = tr.select('td.tac')
             if ele_td:

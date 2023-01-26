@@ -75,7 +75,7 @@ class BaseSubSearcher(object):
         self.session = requests.session()
         self.session.headers[
             'User-Agent'
-        ] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/66.0.3359.181 Safari/537.36'  # noqa
+        ] = 'Mozilla/5.0 (X11; Linux x86_64; rv:109.0) Gecko/20100101 Firefox/109.0'  # noqa
         if cookies:
             for cookie in cookies:
                 self.session.cookies.set(**cookie)
@@ -284,6 +284,8 @@ class HTMLSubSearcher(BaseSubSearcher):
     def __init__(self, subfinder, api_urls=None, cookies=None):
         super().__init__(subfinder, api_urls=api_urls, cookies=cookies)
 
+        self.interactively_select = self.subfinder.interactively_select
+
         # the following attrs will be init at `self._prepare_search_subs` method.
         self.languages = ''
         self.exts = ''
@@ -372,21 +374,30 @@ class HTMLSubSearcher(BaseSubSearcher):
             episode = 'E{:02d}'.format(videoinfo['episode'])
         separators = ['.', ' ']
         keywords = []
-        keywords.append((title, ))
-        if season:
-            keywords.append((title, season))
-        if episode:
+        if season and episode:
             keywords.append((title, season, episode))
             keywords.append((title, season + episode))
+            keywords.append((title + season + episode,))
+        if episode:
+            keywords.append((title, episode))
+            keywords.append((title + episode, ))
+        if season:
+            keywords.append((title, season))
+            keywords.append((title + season, ))
+        keywords.append((title,))
 
-        result = set()
+        result = []
+        seen = set()
         for keyword in keywords:
             for sep in separators:
                 keyword_str = sep.join(keyword)
                 keyword_str = re.sub(r'\s+', ' ', keyword_str)
-                result.add(keyword_str)
+                if keyword_str in seen:
+                    continue
+                seen.add(keyword_str)
+                result.append(keyword_str)
 
-        return list(result)
+        return result
 
     def _filter_subinfo_list(self, subinfo_list):
         """filter subinfo list base on:
@@ -432,6 +443,40 @@ class HTMLSubSearcher(BaseSubSearcher):
                     filtered_subinfo_list[field], key=lambda item: (item['rate'], item['download_count']), reverse=True
                 )
                 return sorted_subinfo_list[0]
+
+    def _interactively_select_subinfo(self, subinfo_list):
+        subinfo_list = list(sorted(subinfo_list, key=lambda item: (item['rate'], item['download_count']), reverse=True))
+        print('找到 {} 个字幕: '.format(len(subinfo_list)))
+        print('  {index:2s} | {title:10s} | {author:10s} | {languages:10s} | {exts:10s} | {rate:2s} | {download_count:10s}'.format(index='序号', title='标题', author="作者", languages='语言', exts='格式', rate='评分', download_count='下载次数'))
+
+        for i, subinfo in enumerate(subinfo_list):
+            print(
+                '  {:2d} | {:20s}\n        {:10s} | {:10s} | {:10s} | {:2s} | {:10s}'.format(
+                    i,
+                    subinfo['title'],
+                    subinfo['author'],
+                    ','.join(subinfo['languages']),
+                    ','.join(subinfo['exts']),
+                    str(subinfo['rate']),
+                    str(subinfo['download_count']),
+                )
+            )
+        idx = -1
+        while True:
+            try:
+                i = int(input('请输入序号选择字幕: '))
+            except ValueError:
+                print('输入错误')
+                continue
+            if i < 0 or i >= len(subinfo_list):
+                print('超出范围')
+                continue
+
+            idx = i
+            break
+
+        return subinfo_list[idx]
+
 
     @abstractmethod
     def _get_subinfo_list(self, keyword):
@@ -497,7 +542,11 @@ class HTMLSubSearcher(BaseSubSearcher):
         for keyword in self.keywords:
             subinfo_list = self._get_subinfo_list(keyword)
             self._debug('subinfo_list: {}'.format(subinfo_list))
-            subinfo = self._filter_subinfo_list(subinfo_list)
+            if self.interactively_select:
+                self._debug('interactively select subtitle')
+                subinfo = self._interactively_select_subinfo(subinfo_list)
+            else:
+                subinfo = self._filter_subinfo_list(subinfo_list)
             self._debug('subinfo: {}'.format(subinfo))
             if subinfo:
                 break

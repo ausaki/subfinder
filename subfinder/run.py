@@ -70,6 +70,11 @@ def run(subfinder_class):
         default=None,
         help='specify the cookies for the subsearcher, e.g: --cookie "domain=example.com;foo=bar" "domain=example2.com;foo=bar"',
     )
+    parser.add_argument(
+        '--interactively-select',
+        action='store_true',
+        help='interactive mode, you can choose which subtitle you want to download',
+    )
     parser.add_argument('-s', '--silence', action='store_true', help="don't print anything, default to False")
     parser.add_argument(
         '-p',

@@ -56,6 +56,8 @@ class SubFinder(object):
         self.no_order_marker = kwargs.get('no_order_marker', False)
         # cookies
         self.cookies = kwargs.get('cookies', [])
+        # interactively select subtitle
+        self.interactively_select = kwargs.get('interactively_select', False)
 
         self.kwargs = kwargs
 
