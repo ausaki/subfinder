@@ -445,8 +445,11 @@ class HTMLSubSearcher(BaseSubSearcher):
                 return sorted_subinfo_list[0]
 
     def _interactively_select_subinfo(self, subinfo_list):
+        if not subinfo_list:
+            return None
+
         subinfo_list = list(sorted(subinfo_list, key=lambda item: (item['rate'], item['download_count']), reverse=True))
-        print('找到 {} 个字幕: '.format(len(subinfo_list)))
+        print('{} 找到 {} 个字幕: '.format(self.videoname, len(subinfo_list)))
         print('  {index:2s} | {title:10s} | {author:10s} | {languages:10s} | {exts:10s} | {rate:2s} | {download_count:10s}'.format(index='序号', title='标题', author="作者", languages='语言', exts='格式', rate='评分', download_count='下载次数'))
 
         for i, subinfo in enumerate(subinfo_list):
