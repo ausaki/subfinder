@@ -47,8 +47,14 @@ class BaseSubSearcher(object):
     You must implement following methods:
     - search_subs
     """
-
     __metaclass__ = ABCMeta
+
+    RE_SEASON = re.compile(r'[Ss](?P<season>\d+)\.?')
+    RE_SEASON_EPISODE = re.compile(r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
+    RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|2160[Pp]|HR)')
+    RE_SOURCE = re.compile(r'\.(?P<source>BD|Blu[Rr]ay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
+    RE_AUDIO_ENC = re.compile(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
+    RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
     LANGUAGES_MAP = {
         '简体': 'zh_chs',
         '繁體': 'zh_cht',
@@ -274,12 +280,7 @@ class HTMLSubSearcher(BaseSubSearcher):
 
     shortname = 'html_subsearcher'
 
-    RE_SEASON = re.compile(r'[Ss](?P<season>\d+)\.?')
-    RE_SEASON_EPISODE = re.compile(r'[Ss](?P<season>\d+)\.?[Ee](?P<episode>\d+)')
-    RE_RESOLUTION = re.compile(r'(?P<resolution>720[Pp]|1080[Pp]|2160[Pp]|HR)')
-    RE_SOURCE = re.compile(r'\.(?P<source>BD|Blu[Rr]ay|BDrip|WEB-DL|HDrip|HDTVrip|HDTV|HD|DVDrip)\.')
-    RE_AUDIO_ENC = re.compile(r'(?P<audio_encoding>mp3|DD5\.1|DDP5\.1|AC3\.5\.1)')
-    RE_VIDEO_ENC = re.compile(r'(?P<video_encoding>x264|H\.264|AVC1|H\.265)')
+
 
     def __init__(self, subfinder, api_urls=None, cookies=None):
         super().__init__(subfinder, api_urls=api_urls, cookies=cookies)

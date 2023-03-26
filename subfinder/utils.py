@@ -6,16 +6,23 @@ import argparse
 from pathlib import Path
 from .subsearcher import BaseSubSearcher
 
+SUB_EXTS = ['ass', 'srt', 'sub']
+
+def is_subtitle_file(filename):
+    p = Path(filename)
+    return p.is_file() and p.suffix[1:] in SUB_EXTS
+
+
+def get_subtitle_files(path):
+    return filter(is_subtitle_file, Path(path).iterdir())
+
 
 def rm_subtitles(path):
     """delete all subtitles in path recursively"""
-    sub_exts = ['ass', 'srt', 'sub']
     count = 0
     for root, dirs, files in os.walk(path):
         for f in files:
-            _, ext = os.path.splitext(f)
-            ext = ext[1:]
-            if ext in sub_exts:
+            if is_subtitle_file(f):
                 p = os.path.join(root, f)
                 count += 1
                 print('Delete {}'.format(p))
@@ -43,29 +50,30 @@ def mv_videos(path):
     return count
 
 
-def rename_subtitle(source, template):
+def rename_subtitle(subtitle, template):
     """重命名字幕文件
     @param source: 要重命名的字幕文件
-    @param template: 模板，例如：'Friends.S{season:02d}.E{episode:02d}.1080p.5.1Ch.BluRay.ReEnc-DeeJayAhmed.{}.{ext}'
+    @param template: 模板，例如：'Friends.S{season:02d}.E{episode:02d}{language}{ext}'
     支持的变量有：season, episode, language, ext
     """
-    root = os.path.dirname(source)
-    old_name = os.path.basename(source)
-    old_name, ext = os.path.splitext(old_name)
-    ext = ext[1:]
-    info = BaseSubSearcher._parse_videoname(old_name)
+    subtitle = Path(subtitle)
+    info = BaseSubSearcher._parse_videoname(subtitle.stem)
     s = info['season']
     e = info['episode']
+    language = ''
+    if len(subtitle.suffixes) > 1:
+        language = subtitle.suffixes[-2]
+    new_name = template.format(season=s, episode=e, language=language, ext=subtitle.suffix)
+    return subtitle.rename(subtitle.with_name(new_name))
 
-    _, language = os.path.splitext(old_name)
-    language = language[1:]
-    if language == '':
-        language = 'UNKNOWN'
 
-    new_name = template.format(season=s, episode=e, language=language, ext=ext)
-    new_file = os.path.join(root, new_name)
-    os.rename(source, new_file)
-    return new_file
+def rename_subtitles(path, template):
+    """rename all subtitles in path"""
+    path = Path(path)
+    for f in path.iterdir():
+        if is_subtitle_file(f):
+            r = rename_subtitle(f, template)
+            print('rename {} to {}'.format(f.name, r.name))
 
 
 def remove_bom(fp):
@@ -210,7 +218,7 @@ def main():
     parser.add_argument(
         '-m', '--move-videos', help="move all files(like videos, subtitles) in sub-directory of PATH to PATH."
     )
-    parser.add_argument('-r', '--rename-sub', nargs=2, help="rename subtitle.")
+    parser.add_argument('-r', '--rename-sub', nargs=2, help="rename subtitles in PATH. e.g. -r PATH TEMPLATE")
     parser.add_argument('-s', '--sync-sub', nargs=2, help='sync subtitle time.')
 
     args = parser.parse_args()
@@ -237,22 +245,8 @@ def main():
         print('Done, move {} files'.format(c))
 
     if args.rename_sub:
-        # try to decode str to unicode in python2
-        source, template = args.rename_sub
-        try:
-            source = source.decode(sys.getfilesystemencoding())
-        except AttributeError:
-            print('error')
-            pass
-        source_list = glob.glob(source)
-        try:
-            template = template.decode(sys.getfilesystemencoding())
-        except AttributeError:
-            print('error')
-            pass
-        for source in source_list:
-            new_file = rename_subtitle(source, template)
-            print('rename {} -> {}'.format(source, new_file))
+        path, template = args.rename_sub
+        rename_subtitles(path, template)
 
     if args.sync_sub:
         subtitle_file, delay = args.sync_sub
