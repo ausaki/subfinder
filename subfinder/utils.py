@@ -83,25 +83,61 @@ def remove_bom(fp):
     fp.seek(0)
 
 
-def parse_hhmmssms_to_ms(hhmmssms, sep=':', ms_sep='.'):
-    parts = hhmmssms.split(sep, 2)
-    h, m = parts[:2]
-    s, ms = parts[2].split(ms_sep)
+def guess_file_encoding(file):
+    """guess file encoding"""
+    for encoding in ['utf-8', 'gbk', 'utf-16']:
+        try:
+            with open(file, 'r', encoding=encoding) as fp:
+                fp.read()
+        except UnicodeDecodeError:
+            continue
+        else:
+            return encoding
+    return None
+
+
+def parse_hhmmssms_to_ms(hhmmssms):
+    parts = hhmmssms.split(',', 1)
+    h, m, s = parts[0].split(':')
+    ms = parts[1]
     return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000 + int(ms)
 
 
-def format_ms_to_hhmmssms(ms, sep=':', ms_sep='.'):
+def format_ms_to_hhmmssms(ms):
     s, ms = divmod(ms, 1000)
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
-    h, m, s, ms = ['{:02d}'.format(x) for x in [h, m, s, ms]]
-    return sep.join([h, m, ms_sep.join([s, ms])])
+    return '{:02d}:{:02d}:{:02d},{:03d}'.format(h, m, s, ms)
+
+def parse_hhmmsshs_to_ms(hhmmsshs):
+    """hhmmsshs format: h:mm:ss.hs, hs is hundredths of seconds with 2 digits"""
+    parts = hhmmsshs.split('.', 1)
+    h, m, s = parts[0].split(':')
+    hs = parts[1]
+    return (int(h) * 3600 + int(m) * 60 + int(s)) * 1000 + int(hs) * 10
+
+
+def format_ms_to_hhmmsshs(ms):
+    s, ms = divmod(ms, 1000)
+    hs = ms // 10
+    m, s = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return '{:d}:{:02d}:{:02d}.{:02d}'.format(h, m, s, hs)
 
 
 def sync_ass(subtitle_file: Path, delay: float):
+    """
+    refs:
+    - https://fileformats.fandom.com/wiki/SubStation_Alpha#Data_types
+    - https://validator.subtitledpro.com/
+    """
     target = subtitle_file.with_suffix(subtitle_file.suffix + '.tmp')
     target_fp = open(target, 'w', encoding='utf-8')
-    with open(subtitle_file, 'r', encoding='utf-8') as fp:
+    if not (encoding := guess_file_encoding(subtitle_file)):
+        print('Unknown file encoding: {}'.format(subtitle_file))
+        return
+
+    with open(subtitle_file, 'r', encoding=encoding) as fp:
         remove_bom(fp)
         block_events = False
         format_fields = -1
@@ -149,12 +185,12 @@ def sync_ass(subtitle_file: Path, delay: float):
 
             # dialogue line
             parts = [p.strip() for p in v.split(',', format_fields - 1)]
-            start = parse_hhmmssms_to_ms(parts[format_start_idx])
-            end = parse_hhmmssms_to_ms(parts[format_end_idx])
+            start = parse_hhmmsshs_to_ms(parts[format_start_idx])
+            end = parse_hhmmsshs_to_ms(parts[format_end_idx])
             start += delay
             end += delay
-            parts[format_start_idx] = format_ms_to_hhmmssms(start)
-            parts[format_end_idx] = format_ms_to_hhmmssms(end)
+            parts[format_start_idx] = format_ms_to_hhmmsshs(start)
+            parts[format_end_idx] = format_ms_to_hhmmsshs(end)
             new_value = ','.join(parts)
             line = '{}: {}\n'.format(key, new_value)
             target_fp.write(line)
@@ -166,7 +202,11 @@ def sync_ass(subtitle_file: Path, delay: float):
 def sync_srt(subtitle_file: Path, delay: float):
     target = subtitle_file.with_suffix(subtitle_file.suffix + '.tmp')
     target_fp = open(target, 'w', encoding='utf-8')
-    with open(subtitle_file, 'r', encoding='utf-8') as fp:
+    if not (encoding := guess_file_encoding(subtitle_file)):
+        print('Unknown file encoding: {}'.format(subtitle_file))
+        return
+
+    with open(subtitle_file, 'r', encoding=encoding) as fp:
         remove_bom(fp)
         sub_index = -1
         find_sub_index = False
@@ -188,12 +228,12 @@ def sync_srt(subtitle_file: Path, delay: float):
             if find_sub_index:
                 find_sub_index = False
                 parts = striped_line.split(' --> ')
-                start = parse_hhmmssms_to_ms(parts[0], ms_sep=',')
-                end = parse_hhmmssms_to_ms(parts[1], ms_sep=',')
+                start = parse_hhmmssms_to_ms(parts[0])
+                end = parse_hhmmssms_to_ms(parts[1])
                 start += delay
                 end += delay
-                parts[0] = format_ms_to_hhmmssms(start, ms_sep=',')
-                parts[1] = format_ms_to_hhmmssms(end, ms_sep=',')
+                parts[0] = format_ms_to_hhmmssms(start)
+                parts[1] = format_ms_to_hhmmssms(end)
                 line = ' --> '.join(parts) + '\n'
                 target_fp.write(line)
                 continue
