@@ -1,16 +1,28 @@
 import codecs
 import os
 import sys
-import glob
+import mimetypes
 import argparse
 from pathlib import Path
 from .subsearcher import BaseSubSearcher
 
 SUB_EXTS = ['ass', 'srt', 'sub']
 
+
 def is_subtitle_file(filename):
     p = Path(filename)
     return p.is_file() and p.suffix[1:] in SUB_EXTS
+
+
+def is_video_file(filename):
+    video_exts = {'.mkv', '.mp4', '.ts', '.avi', '.wmv'}
+    p = Path(filename)
+    if p.is_file():
+        types = mimetypes.guess_type(p)
+        mtype = types[0]
+        if (mtype and mtype.split('/')[0] == 'video') or (p.suffix in video_exts):
+            return True
+    return False
 
 
 def get_subtitle_files(path):
@@ -50,11 +62,10 @@ def mv_videos(path):
     return count
 
 
-def rename_subtitle(subtitle, template):
-    """重命名字幕文件
-    @param source: 要重命名的字幕文件
-    @param template: 模板，例如：'Friends.S{season:02d}.E{episode:02d}{language}{ext}'
-    支持的变量有：season, episode, language, ext
+def rename_subtitle(subtitle, template, video_files):
+    """rename subtitle according to template, a example of template: "Friends.S{season:02d}.E{episode:02d}{language}{ext}"
+    template support format string, supported variables include: season, episode, language, ext
+    if template is set to "video", then subtitle is renamed according to its corresponding video.
     """
     subtitle = Path(subtitle)
     info = BaseSubSearcher._parse_videoname(subtitle.stem)
@@ -63,6 +74,8 @@ def rename_subtitle(subtitle, template):
     language = ''
     if len(subtitle.suffixes) > 1:
         language = subtitle.suffixes[-2]
+    if template == 'video' and video_files and (video_file := video_files.get((s, e))):
+        template = f'{video_file.stem}{{language}}{{ext}}'
     new_name = template.format(season=s, episode=e, language=language, ext=subtitle.suffix)
     return subtitle.rename(subtitle.with_name(new_name))
 
@@ -70,15 +83,25 @@ def rename_subtitle(subtitle, template):
 def rename_subtitles(path, template):
     """rename all subtitles in path"""
     path = Path(path)
+    video_files = {}
+    subtitle_files = []
     for f in path.iterdir():
+        if is_video_file(f):
+            info = BaseSubSearcher._parse_videoname(f.stem)
+            video_files[(info['season'], info['episode'])] = f
         if is_subtitle_file(f):
-            r = rename_subtitle(f, template)
-            print('rename {} to {}'.format(f.name, r.name))
+            subtitle_files.append(f)
+    for f in subtitle_files:
+        r = rename_subtitle(f, template, video_files)
+        print('rename {} to {}'.format(f.name, r.name))
 
 
 def remove_bom(fp):
     bytes = fp.read(1).encode('utf-8')
-    if any(bytes.startswith(bom) for bom in [codecs.BOM32_LE, codecs.BOM32_BE, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE, codecs.BOM_UTF8]):
+    if any(
+        bytes.startswith(bom)
+        for bom in [codecs.BOM32_LE, codecs.BOM32_BE, codecs.BOM_UTF16_LE, codecs.BOM_UTF16_BE, codecs.BOM_UTF8]
+    ):
         return
     fp.seek(0)
 
@@ -108,6 +131,7 @@ def format_ms_to_hhmmssms(ms):
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
     return '{:02d}:{:02d}:{:02d},{:03d}'.format(h, m, s, ms)
+
 
 def parse_hhmmsshs_to_ms(hhmmsshs):
     """hhmmsshs format: h:mm:ss.hs, hs is hundredths of seconds with 2 digits"""
@@ -258,7 +282,15 @@ def main():
     parser.add_argument(
         '-m', '--move-videos', help="move all files(like videos, subtitles) in sub-directory of PATH to PATH."
     )
-    parser.add_argument('-r', '--rename-sub', nargs=2, help="rename subtitles in PATH. e.g. -r PATH TEMPLATE")
+    parser.add_argument(
+        '-r',
+        '--rename-sub',
+        nargs=2,
+        help=(
+            'rename subtitles in PATH. e.g. -r PATH TEMPLATE. TEMPLATE support vars: {season}, {episode}, {language}, {ext}. '
+            'if TEMPATE is set to "video", then subtitle is renamed according to its corresponding video.'
+        ),
+    )
     parser.add_argument('-s', '--sync-sub', nargs=2, help='sync subtitle time.')
 
     args = parser.parse_args()
