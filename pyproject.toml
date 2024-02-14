@@ -14,7 +14,7 @@ requests = "*"
 lxml = "*"
 rarfile = "*"
 six = "*"
-gevent = "^22.10.2"
+gevent = "^24.0.0"
 beautifulsoup4 = "^4.9.3"
 
 [tool.poetry.dev-dependencies]
